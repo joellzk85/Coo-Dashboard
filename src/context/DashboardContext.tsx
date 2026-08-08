@@ -30,7 +30,6 @@ import {
   signInWithPopup,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
-  signInAnonymously,
   signOut
 } from 'firebase/auth';
 import {
@@ -198,34 +197,21 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   // 1. Firebase Auth listener
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      if (currentUser) {
-        setUser(currentUser);
-        setIsAuthLoading(false);
-      } else {
-        // Auto sign-in anonymously so user has an active Cloud UID immediately
-        try {
-          const res = await signInAnonymously(auth);
-          setUser(res.user);
-        } catch (err) {
-          console.error('Anonymous auth failed:', err);
-          setUser(null);
-        } finally {
-          setIsAuthLoading(false);
-        }
-      }
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      setIsAuthLoading(false);
     });
 
     return () => unsubscribe();
   }, []);
 
-  // 2. Realtime Firestore Sync Listeners for the logged-in User
+  const activeUid = user ? user.uid : 'default_coo';
+
+  // 2. Realtime Firestore Sync Listeners (works for authenticated users & default unauthenticated session)
   useEffect(() => {
-    if (!user) return;
     setSyncStatus('syncing');
 
-    const uid = user.uid;
-
+    const uid = activeUid;
     const userRef = (colName: string) => collection(db, 'users', uid, colName);
 
     // Listeners array to cleanup on unmount or user change
@@ -282,7 +268,7 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     return () => {
       unsubs.forEach((unsub) => unsub());
     };
-  }, [user]);
+  }, [activeUid]);
 
   // Auth Methods
   const signInWithGoogle = async () => {
@@ -330,14 +316,12 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const signOutUser = async () => {
     await signOut(auth);
-    // Auto sign back in anonymously so workspace is fresh
-    await signInAnonymously(auth);
+    setUser(null);
   };
 
   const seedUserDataToCloud = async () => {
-    if (!user) return;
     setSyncStatus('syncing');
-    const uid = user.uid;
+    const uid = activeUid;
     const batch = writeBatch(db);
 
     const seedCol = <T extends { id: string }>(colName: string, items: T[]) => {
@@ -369,10 +353,9 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       lastUpdated: new Date().toISOString().split('T')[0],
     };
     setCompanyGoals((prev) => [newGoal, ...prev]);
-    if (!user) return;
     try {
       setSyncStatus('syncing');
-      await setDoc(doc(db, 'users', user.uid, 'companyGoals', id), cleanObject(newGoal));
+      await setDoc(doc(db, 'users', activeUid, 'companyGoals', id), cleanObject(newGoal));
       setSyncStatus('synced');
     } catch (err) {
       console.error('Error adding company goal:', err);
@@ -389,10 +372,9 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       lastUpdated: new Date().toISOString().split('T')[0],
     };
     setCompanyGoals((prev) => prev.map((g) => (g.id === id ? updated : g)));
-    if (!user) return;
     try {
       setSyncStatus('syncing');
-      await setDoc(doc(db, 'users', user.uid, 'companyGoals', id), cleanObject(updated));
+      await setDoc(doc(db, 'users', activeUid, 'companyGoals', id), cleanObject(updated));
       setSyncStatus('synced');
     } catch (err) {
       console.error('Error updating company goal:', err);
@@ -402,10 +384,9 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const deleteCompanyGoal = async (id: string) => {
     setCompanyGoals((prev) => prev.filter((g) => g.id !== id));
-    if (!user) return;
     try {
       setSyncStatus('syncing');
-      await deleteDoc(doc(db, 'users', user.uid, 'companyGoals', id));
+      await deleteDoc(doc(db, 'users', activeUid, 'companyGoals', id));
       setSyncStatus('synced');
     } catch (err) {
       console.error('Error deleting company goal:', err);
@@ -431,10 +412,9 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       lastUpdated: new Date().toISOString().split('T')[0],
     };
     setDepartmentGoals((prev) => [newGoal, ...prev]);
-    if (!user) return;
     try {
       setSyncStatus('syncing');
-      await setDoc(doc(db, 'users', user.uid, 'departmentGoals', id), cleanObject(newGoal));
+      await setDoc(doc(db, 'users', activeUid, 'departmentGoals', id), cleanObject(newGoal));
       setSyncStatus('synced');
     } catch (err) {
       console.error('Error adding department goal:', err);
@@ -451,10 +431,9 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       lastUpdated: new Date().toISOString().split('T')[0],
     };
     setDepartmentGoals((prev) => prev.map((g) => (g.id === id ? updated : g)));
-    if (!user) return;
     try {
       setSyncStatus('syncing');
-      await setDoc(doc(db, 'users', user.uid, 'departmentGoals', id), cleanObject(updated));
+      await setDoc(doc(db, 'users', activeUid, 'departmentGoals', id), cleanObject(updated));
       setSyncStatus('synced');
     } catch (err) {
       console.error('Error updating department goal:', err);
@@ -464,10 +443,9 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const deleteDepartmentGoal = async (id: string) => {
     setDepartmentGoals((prev) => prev.filter((g) => g.id !== id));
-    if (!user) return;
     try {
       setSyncStatus('syncing');
-      await deleteDoc(doc(db, 'users', user.uid, 'departmentGoals', id));
+      await deleteDoc(doc(db, 'users', activeUid, 'departmentGoals', id));
       setSyncStatus('synced');
     } catch (err) {
       console.error('Error deleting department goal:', err);
@@ -493,10 +471,9 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       createdAt: new Date().toISOString(),
     };
     setSessions121((prev) => [newSession, ...prev]);
-    if (!user) return;
     try {
       setSyncStatus('syncing');
-      await setDoc(doc(db, 'users', user.uid, 'sessions121', id), cleanObject(newSession));
+      await setDoc(doc(db, 'users', activeUid, 'sessions121', id), cleanObject(newSession));
       setSyncStatus('synced');
     } catch (err) {
       console.error('Error adding 121 session:', err);
@@ -509,10 +486,9 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     if (!existing) return;
     const updated = { ...existing, ...partial };
     setSessions121((prev) => prev.map((s) => (s.id === id ? updated : s)));
-    if (!user) return;
     try {
       setSyncStatus('syncing');
-      await setDoc(doc(db, 'users', user.uid, 'sessions121', id), cleanObject(updated));
+      await setDoc(doc(db, 'users', activeUid, 'sessions121', id), cleanObject(updated));
       setSyncStatus('synced');
     } catch (err) {
       console.error('Error updating 121 session:', err);
@@ -522,10 +498,9 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const delete121Session = async (id: string) => {
     setSessions121((prev) => prev.filter((s) => s.id !== id));
-    if (!user) return;
     try {
       setSyncStatus('syncing');
-      await deleteDoc(doc(db, 'users', user.uid, 'sessions121', id));
+      await deleteDoc(doc(db, 'users', activeUid, 'sessions121', id));
       setSyncStatus('synced');
     } catch (err) {
       console.error('Error deleting 121 session:', err);
@@ -542,10 +517,9 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       createdAt: new Date().toISOString(),
     };
     setWellnessLogs((prev) => [newLog, ...prev]);
-    if (!user) return;
     try {
       setSyncStatus('syncing');
-      await setDoc(doc(db, 'users', user.uid, 'wellnessLogs', id), cleanObject(newLog));
+      await setDoc(doc(db, 'users', activeUid, 'wellnessLogs', id), cleanObject(newLog));
       setSyncStatus('synced');
     } catch (err) {
       console.error('Error adding wellness log:', err);
@@ -558,10 +532,9 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     if (!existing) return;
     const updated = { ...existing, ...partial };
     setWellnessLogs((prev) => prev.map((w) => (w.id === id ? updated : w)));
-    if (!user) return;
     try {
       setSyncStatus('syncing');
-      await setDoc(doc(db, 'users', user.uid, 'wellnessLogs', id), cleanObject(updated));
+      await setDoc(doc(db, 'users', activeUid, 'wellnessLogs', id), cleanObject(updated));
       setSyncStatus('synced');
     } catch (err) {
       console.error('Error updating wellness log:', err);
@@ -571,10 +544,9 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const deleteWellnessLog = async (id: string) => {
     setWellnessLogs((prev) => prev.filter((w) => w.id !== id));
-    if (!user) return;
     try {
       setSyncStatus('syncing');
-      await deleteDoc(doc(db, 'users', user.uid, 'wellnessLogs', id));
+      await deleteDoc(doc(db, 'users', activeUid, 'wellnessLogs', id));
       setSyncStatus('synced');
     } catch (err) {
       console.error('Error deleting wellness log:', err);
@@ -587,10 +559,9 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     const id = `act_${Date.now()}`;
     const newLog: ActivityImpactLog = { ...log, id };
     setActivityLogs((prev) => [newLog, ...prev]);
-    if (!user) return;
     try {
       setSyncStatus('syncing');
-      await setDoc(doc(db, 'users', user.uid, 'activityLogs', id), cleanObject(newLog));
+      await setDoc(doc(db, 'users', activeUid, 'activityLogs', id), cleanObject(newLog));
       setSyncStatus('synced');
     } catch (err) {
       console.error('Error adding activity log:', err);
@@ -600,10 +571,9 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const deleteActivityLog = async (id: string) => {
     setActivityLogs((prev) => prev.filter((a) => a.id !== id));
-    if (!user) return;
     try {
       setSyncStatus('syncing');
-      await deleteDoc(doc(db, 'users', user.uid, 'activityLogs', id));
+      await deleteDoc(doc(db, 'users', activeUid, 'activityLogs', id));
       setSyncStatus('synced');
     } catch (err) {
       console.error('Error deleting activity log:', err);
@@ -616,10 +586,9 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     const id = `ref_${Date.now()}`;
     const newRef: COOLearningReflection = { ...reflection, id };
     setReflections((prev) => [newRef, ...prev]);
-    if (!user) return;
     try {
       setSyncStatus('syncing');
-      await setDoc(doc(db, 'users', user.uid, 'reflections', id), cleanObject(newRef));
+      await setDoc(doc(db, 'users', activeUid, 'reflections', id), cleanObject(newRef));
       setSyncStatus('synced');
     } catch (err) {
       console.error('Error adding reflection:', err);
@@ -629,10 +598,9 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const deleteReflection = async (id: string) => {
     setReflections((prev) => prev.filter((r) => r.id !== id));
-    if (!user) return;
     try {
       setSyncStatus('syncing');
-      await deleteDoc(doc(db, 'users', user.uid, 'reflections', id));
+      await deleteDoc(doc(db, 'users', activeUid, 'reflections', id));
       setSyncStatus('synced');
     } catch (err) {
       console.error('Error deleting reflection:', err);
@@ -645,10 +613,9 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     const id = `book_${Date.now()}`;
     const newLog: ReadingLog = { ...log, id };
     setReadingLogs((prev) => [newLog, ...prev]);
-    if (!user) return;
     try {
       setSyncStatus('syncing');
-      await setDoc(doc(db, 'users', user.uid, 'readingLogs', id), cleanObject(newLog));
+      await setDoc(doc(db, 'users', activeUid, 'readingLogs', id), cleanObject(newLog));
       setSyncStatus('synced');
     } catch (err) {
       console.error('Error adding reading log:', err);
@@ -661,10 +628,9 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     if (!existing) return;
     const updated = { ...existing, ...partial };
     setReadingLogs((prev) => prev.map((r) => (r.id === id ? updated : r)));
-    if (!user) return;
     try {
       setSyncStatus('syncing');
-      await setDoc(doc(db, 'users', user.uid, 'readingLogs', id), cleanObject(updated));
+      await setDoc(doc(db, 'users', activeUid, 'readingLogs', id), cleanObject(updated));
       setSyncStatus('synced');
     } catch (err) {
       console.error('Error updating reading log:', err);
@@ -674,10 +640,9 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const deleteReadingLog = async (id: string) => {
     setReadingLogs((prev) => prev.filter((r) => r.id !== id));
-    if (!user) return;
     try {
       setSyncStatus('syncing');
-      await deleteDoc(doc(db, 'users', user.uid, 'readingLogs', id));
+      await deleteDoc(doc(db, 'users', activeUid, 'readingLogs', id));
       setSyncStatus('synced');
     } catch (err) {
       console.error('Error deleting reading log:', err);
@@ -690,10 +655,9 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     const id = `pb_${Date.now()}`;
     const newItem: PersonalGoalAndBible = { ...item, id };
     setPersonalGoalsAndBible((prev) => [newItem, ...prev]);
-    if (!user) return;
     try {
       setSyncStatus('syncing');
-      await setDoc(doc(db, 'users', user.uid, 'personalGoalsAndBible', id), cleanObject(newItem));
+      await setDoc(doc(db, 'users', activeUid, 'personalGoalsAndBible', id), cleanObject(newItem));
       setSyncStatus('synced');
     } catch (err) {
       console.error('Error adding personal goal:', err);
@@ -706,10 +670,9 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     if (!existing) return;
     const updated = { ...existing, completed: !existing.completed };
     setPersonalGoalsAndBible((prev) => prev.map((p) => (p.id === id ? updated : p)));
-    if (!user) return;
     try {
       setSyncStatus('syncing');
-      await updateDoc(doc(db, 'users', user.uid, 'personalGoalsAndBible', id), {
+      await updateDoc(doc(db, 'users', activeUid, 'personalGoalsAndBible', id), {
         completed: updated.completed,
       });
       setSyncStatus('synced');
@@ -721,10 +684,9 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const deletePersonalGoalOrBible = async (id: string) => {
     setPersonalGoalsAndBible((prev) => prev.filter((p) => p.id !== id));
-    if (!user) return;
     try {
       setSyncStatus('syncing');
-      await deleteDoc(doc(db, 'users', user.uid, 'personalGoalsAndBible', id));
+      await deleteDoc(doc(db, 'users', activeUid, 'personalGoalsAndBible', id));
       setSyncStatus('synced');
     } catch (err) {
       console.error('Error deleting personal goal:', err);
