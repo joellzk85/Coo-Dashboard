@@ -1,0 +1,88 @@
+{
+  "entities": {
+    "CompanyGoal": {
+      "title": "CompanyGoal",
+      "description": "Company-wide big goal and milestones for Next Energy & Next Academy",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "maxLength": 200 },
+        "description": { "type": "string", "maxLength": 1000 },
+        "targetMetric": { "type": "string", "maxLength": 100 },
+        "currentValue": { "type": "number" },
+        "targetValue": { "type": "number" },
+        "unit": { "type": "string", "maxLength": 50 },
+        "targetDate": { "type": "string" },
+        "overallRating": { "type": "string" },
+        "lastUpdated": { "type": "string" }
+      },
+      "required": ["title", "description", "targetMetric", "targetDate"]
+    },
+    "DepartmentGoal": {
+      "title": "DepartmentGoal",
+      "description": "Goal set for a specific department (e.g. Sales, Admin, HR, Projects, CS, Marketing)",
+      "type": "object",
+      "properties": {
+        "departmentId": { "type": "string" },
+        "departmentName": { "type": "string" },
+        "companyId": { "type": "string" },
+        "hodName": { "type": "string" },
+        "title": { "type": "string", "maxLength": 200 },
+        "description": { "type": "string", "maxLength": 1000 },
+        "targetMetric": { "type": "string" },
+        "progressPercent": { "type": "number" },
+        "status": { "type": "string" },
+        "targetDate": { "type": "string" },
+        "lastUpdated": { "type": "string" }
+      },
+      "required": ["departmentId", "title", "companyId"]
+    },
+    "Session121": {
+      "title": "Session121",
+      "description": "1-on-1 meeting record with notes, sentiment ups/downs, and action items",
+      "type": "object",
+      "properties": {
+        "personName": { "type": "string" },
+        "role": { "type": "string" },
+        "departmentId": { "type": "string" },
+        "companyId": { "type": "string" },
+        "cadence": { "type": "string" },
+        "date": { "type": "string" },
+        "monthYear": { "type": "string" },
+        "status": { "type": "string" },
+        "notes": { "type": "string", "maxLength": 2000 },
+        "energyRating": { "type": "number" }
+      },
+      "required": ["personName", "role", "date", "notes"]
+    },
+    "MonthlyKPIGrade": {
+      "title": "MonthlyKPIGrade",
+      "description": "COO personal monthly KPI grading across 4 operational dimensions",
+      "type": "object",
+      "properties": {
+        "monthYear": { "type": "string" },
+        "overallScore": { "type": "number" },
+        "grade": { "type": "string" },
+        "reflections": { "type": "string", "maxLength": 2000 }
+      },
+      "required": ["monthYear", "overallScore", "grade"]
+    }
+  },
+  "firestore": {
+    "/companyGoals/{goalId}": {
+      "schema": { "$ref": "#/entities/CompanyGoal" },
+      "description": "Collection of company big goals"
+    },
+    "/departmentGoals/{goalId}": {
+      "schema": { "$ref": "#/entities/DepartmentGoal" },
+      "description": "Collection of department goals"
+    },
+    "/sessions121/{sessionId}": {
+      "schema": { "$ref": "#/entities/Session121" },
+      "description": "Collection of 121 sessions"
+    },
+    "/kpiGrades/{gradeId}": {
+      "schema": { "$ref": "#/entities/MonthlyKPIGrade" },
+      "description": "Collection of COO monthly performance grades"
+    }
+  }
+}

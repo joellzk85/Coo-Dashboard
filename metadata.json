@@ -1,0 +1,6 @@
+{
+  "name": "COO Executive Dashboard",
+  "description": "Executive COO dashboard for Next Energy & Next Academy tracking company progress, 1-on-1 sessions, and personal performance.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
