@@ -135,6 +135,19 @@ export const DashboardCompanyProgress: React.FC<DashboardCompanyProgressProps> =
                       <span className="text-sm font-black text-blue-600">{cg.overallRating}</span>
                     </div>
 
+                    {/* Impact Level Badge */}
+                    <span
+                      className={`px-2.5 py-1 rounded-lg text-[10px] font-extrabold border ${
+                        cg.impactLevel === 'High'
+                          ? 'bg-amber-50 text-amber-700 border-amber-300'
+                          : cg.impactLevel === 'Low'
+                          ? 'bg-slate-50 text-slate-600 border-slate-200'
+                          : 'bg-blue-50 text-blue-700 border-blue-200'
+                      }`}
+                    >
+                      {cg.impactLevel === 'High' ? '🔥 High Impact (1.5x)' : cg.impactLevel === 'Low' ? '🌱 Low Impact (0.5x)' : '⚡ Med Impact (1.0x)'}
+                    </span>
+
                     {/* Edit Control */}
                     <button
                       onClick={() => setEditingGoal({ type: 'company', data: cg })}
@@ -316,16 +329,31 @@ export const DashboardCompanyProgress: React.FC<DashboardCompanyProgressProps> =
                 className="bg-white border border-slate-200 hover:border-blue-300 rounded-xl p-5 shadow-sm flex flex-col justify-between transition-all group"
               >
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <span
-                      className={`text-[10px] font-bold px-2.5 py-0.5 rounded-md uppercase tracking-wider ${
-                        isEnergy
-                          ? 'bg-blue-50 text-blue-700 border border-blue-200'
-                          : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                      }`}
-                    >
-                      {dg.departmentName} (HOD: {dg.hodName})
-                    </span>
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span
+                        className={`text-[10px] font-bold px-2.5 py-0.5 rounded-md uppercase tracking-wider ${
+                          isEnergy
+                            ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                            : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                        }`}
+                      >
+                        {dg.departmentName} (HOD: {dg.hodName})
+                      </span>
+
+                      {/* Impact Level Badge */}
+                      <span
+                        className={`text-[9px] font-bold px-2 py-0.5 rounded border ${
+                          dg.impactLevel === 'High'
+                            ? 'bg-amber-50 text-amber-700 border-amber-300'
+                            : dg.impactLevel === 'Low'
+                            ? 'bg-slate-50 text-slate-600 border-slate-200'
+                            : 'bg-blue-50 text-blue-700 border-blue-200'
+                        }`}
+                      >
+                        {dg.impactLevel === 'High' ? '🔥 High (1.5x)' : dg.impactLevel === 'Low' ? '🌱 Low (0.5x)' : '⚡ Med (1.0x)'}
+                      </span>
+                    </div>
 
                     <div className="flex items-center gap-1.5">
                       {getStatusBadge(dg.status)}
@@ -375,6 +403,54 @@ export const DashboardCompanyProgress: React.FC<DashboardCompanyProgressProps> =
                       />
                     </div>
                   </div>
+
+                  {/* Next Academy Specific Metric Breakdown if present */}
+                  {(dg.academyRevenueTarget || dg.academyTrainingDaysTarget) && (
+                    <div className="bg-amber-50/60 border border-amber-200 p-3 rounded-xl space-y-2 text-xs">
+                      <div className="font-bold text-amber-800 text-[11px] flex items-center gap-1">
+                        <GraduationCap className="w-3.5 h-3.5 text-amber-600" />
+                        <span>Next Academy Volume & Revenue Metrics</span>
+                      </div>
+                      
+                      {dg.academyRevenueTarget && (
+                        <div className="space-y-1">
+                          <div className="flex justify-between text-[11px]">
+                            <span className="text-slate-600">Revenue Target (RM):</span>
+                            <span className="font-bold text-slate-900">
+                              RM {(dg.academyRevenueCurrent ?? 0).toLocaleString()} / RM {dg.academyRevenueTarget.toLocaleString()}
+                            </span>
+                          </div>
+                          <div className="w-full bg-amber-200/70 h-1.5 rounded-full overflow-hidden">
+                            <div
+                              className="bg-amber-600 h-full rounded-full"
+                              style={{
+                                width: `${Math.min(100, Math.round(((dg.academyRevenueCurrent ?? 0) / dg.academyRevenueTarget) * 100))}%`
+                              }}
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      {dg.academyTrainingDaysTarget && (
+                        <div className="space-y-1">
+                          <div className="flex justify-between text-[11px]">
+                            <span className="text-slate-600">Training Volume:</span>
+                            <span className="font-bold text-slate-900">
+                              {dg.academyTrainingDaysCurrent ?? 0} / {dg.academyTrainingDaysTarget} Days Conducted
+                            </span>
+                          </div>
+                          <div className="w-full bg-emerald-200/70 h-1.5 rounded-full overflow-hidden">
+                            <div
+                              className="bg-emerald-600 h-full rounded-full"
+                              style={{
+                                width: `${Math.min(100, Math.round(((dg.academyTrainingDaysCurrent ?? 0) / dg.academyTrainingDaysTarget) * 100))}%`
+                              }}
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   {/* Milestones checklist */}
                   <div className="space-y-1.5 pt-1">

@@ -52,6 +52,7 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({ isOpen, type, onCl
   const [goalTargetMetric, setGoalTargetMetric] = useState('');
   const [goalTargetDate, setGoalTargetDate] = useState(new Date().toISOString().split('T')[0]);
   const [goalMilestones, setGoalMilestones] = useState<string[]>(['']);
+  const [goalImpactLevel, setGoalImpactLevel] = useState<'High' | 'Medium' | 'Low'>('High');
 
   // Form states for Activity
   const [actTitle, setActTitle] = useState('');
@@ -141,6 +142,7 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({ isOpen, type, onCl
       progressPercent: 0,
       status: 'On Track',
       targetDate: goalTargetDate,
+      impactLevel: goalImpactLevel,
       milestones: goalMilestones
         .filter((m) => m.trim() !== '')
         .map((m, i) => ({ id: `m_${Date.now()}_${i}`, title: m, completed: false })),
@@ -419,6 +421,19 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({ isOpen, type, onCl
                 placeholder="Key outcomes expected..."
                 className="w-full bg-slate-50 p-2.5 rounded-xl border border-slate-300 text-slate-900 focus:outline-none focus:border-blue-600 focus:bg-white"
               />
+            </div>
+
+            <div>
+              <label className="font-bold text-slate-900 block mb-1">Goal Impact Level (Weights in Rating Engine)</label>
+              <select
+                value={goalImpactLevel}
+                onChange={(e) => setGoalImpactLevel(e.target.value as any)}
+                className="w-full bg-slate-50 p-2.5 rounded-xl border border-slate-300 text-slate-900 focus:outline-none focus:border-blue-600 focus:bg-white font-medium"
+              >
+                <option value="High">🔥 High Impact (1.5x Multiplier)</option>
+                <option value="Medium">⚡ Medium Impact (1.0x Multiplier)</option>
+                <option value="Low">🌱 Low Impact (0.5x Multiplier)</option>
+              </select>
             </div>
 
             <div className="grid grid-cols-2 gap-3">

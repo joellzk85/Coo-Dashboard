@@ -17,6 +17,8 @@ export interface Milestone {
   completed: boolean;
 }
 
+export type GoalImpactLevel = 'High' | 'Medium' | 'Low';
+
 export interface CompanyGoal {
   id: string;
   companyId: CompanyId;
@@ -30,6 +32,12 @@ export interface CompanyGoal {
   overallRating: 'A+' | 'A' | 'B' | 'C' | 'D' | 'F';
   milestones: Milestone[];
   lastUpdated: string;
+  impactLevel?: GoalImpactLevel;
+  // Next Academy Specific Metrics
+  academyRevenueCurrent?: number; // In RM
+  academyRevenueTarget?: number; // In RM
+  academyTrainingDaysCurrent?: number; // In Days of Training
+  academyTrainingDaysTarget?: number; // In Days of Training
 }
 
 export interface DepartmentGoal {
@@ -46,6 +54,12 @@ export interface DepartmentGoal {
   targetDate: string;
   milestones: Milestone[];
   lastUpdated: string;
+  impactLevel?: GoalImpactLevel;
+  // Next Academy Specific Metrics
+  academyRevenueCurrent?: number; // In RM
+  academyRevenueTarget?: number; // In RM
+  academyTrainingDaysCurrent?: number; // In Days of Training
+  academyTrainingDaysTarget?: number; // In Days of Training
 }
 
 export interface ActionItem {
@@ -144,6 +158,7 @@ export interface PersonalGoalAndBible {
   actionSteps: string;
   targetDate: string;
   completed: boolean;
+  impactLevel?: GoalImpactLevel;
 }
 
 export interface WellnessLog {

@@ -16,7 +16,13 @@ import {
   PieChart,
   Brain,
   CheckCircle2,
-  Activity
+  Activity,
+  Calculator,
+  Calendar,
+  X,
+  Info,
+  Layers,
+  ChevronRight
 } from 'lucide-react';
 
 interface DashboardCOOPerformanceProps {
@@ -34,7 +40,10 @@ export const DashboardCOOPerformance: React.FC<DashboardCOOPerformanceProps> = (
 }) => {
   const {
     selectedMonth,
+    selectedMonths,
+    toggleSelectedMonth,
     getAutomatedKPIGradeForMonth,
+    getCumulativeKPIGradeForMonths,
     activityLogs,
     deleteActivityLog,
     reflections,
@@ -47,8 +56,13 @@ export const DashboardCOOPerformance: React.FC<DashboardCOOPerformanceProps> = (
     wellnessLogs,
   } = useDashboard();
 
-  // Get current automated KPI grade
-  const autoGrade = getAutomatedKPIGradeForMonth(selectedMonth);
+  const [showFormulaModal, setShowFormulaModal] = useState(false);
+
+  // Available months list for multi-select
+  const availableMonths = ['2026-08', '2026-07', '2026-06', '2026-05'];
+
+  // Calculate cumulative grade and formula audit breakdown across selected months
+  const auditBreakdown = getCumulativeKPIGradeForMonths(selectedMonths);
 
   // Activity Impact calculations
   const totalActivityHours = activityLogs.reduce((acc, l) => acc + l.hoursSpent, 0);
@@ -58,38 +72,81 @@ export const DashboardCOOPerformance: React.FC<DashboardCOOPerformanceProps> = (
 
   return (
     <div className="space-y-8">
-      {/* 1. Automated Monthly KPI Grading Engine */}
+      {/* 1. Automated Multi-Month Cumulative KPI Grading Engine */}
       <section className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
-          <div>
-            <div className="flex items-center gap-2">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-100 pb-5">
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <span className="bg-emerald-100 text-emerald-800 text-xs font-bold px-2.5 py-0.5 rounded-md uppercase tracking-wide flex items-center gap-1">
                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
                 Automated Dynamic KPI Engine
               </span>
-              <span className="text-xs text-slate-500 font-medium">Month: {selectedMonth}</span>
+              <span className="text-xs text-slate-500 font-semibold bg-slate-100 px-2.5 py-0.5 rounded-md border border-slate-200">
+                {selectedMonths.length} Month{selectedMonths.length > 1 ? 's' : ''} Aggregated
+              </span>
             </div>
-            <h2 className="text-xl font-bold text-slate-900 mt-1 flex items-center gap-2">
+            
+            <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
               <Award className="w-5 h-5 text-blue-600" />
-              <span>COO Executive Grade & Performance Scorecard</span>
+              <span>Cumulative COO Executive Grade & Scorecard</span>
             </h2>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Grade is calculated automatically from real-time daily inputs (121 cadence, goal progress, high-impact hours, and wellness consistency).
+
+            <p className="text-xs text-slate-500 max-w-2xl">
+              Grade is calculated automatically from actual execution rates across selected months with Goal Impact Weighting (High: 1.5x, Med: 1.0x, Low: 0.5x).
             </p>
+
+            {/* Multi-Month Selector Controls */}
+            <div className="pt-2 flex items-center gap-2 flex-wrap">
+              <span className="text-[11px] font-bold text-slate-700 flex items-center gap-1">
+                <Calendar className="w-3.5 h-3.5 text-slate-500" /> Select Cumulative Months:
+              </span>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                {availableMonths.map((m) => {
+                  const isSelected = selectedMonths.includes(m);
+                  return (
+                    <button
+                      key={m}
+                      onClick={() => toggleSelectedMonth(m)}
+                      className={`text-xs px-3 py-1 rounded-xl font-bold transition-all border ${
+                        isSelected
+                          ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
+                          : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                      }`}
+                    >
+                      {m} {isSelected ? '✓' : ''}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           </div>
 
-          <div className="flex items-center gap-4 bg-slate-900 text-white px-5 py-3 rounded-2xl border border-slate-800 shadow-md">
-            <div className="text-right">
-              <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Automated Score</span>
-              <span className="text-2xl font-black text-blue-400">{autoGrade.overallScore} <span className="text-xs text-slate-400 font-medium">/ 100</span></span>
-            </div>
-            <div className="w-12 h-12 rounded-xl bg-blue-600 text-white font-black text-2xl flex items-center justify-center shadow-lg shadow-blue-600/30">
-              {autoGrade.grade}
+          <div className="flex items-center gap-3 self-start lg:self-auto">
+            {/* View Formula Audit Modal Button */}
+            <button
+              onClick={() => setShowFormulaModal(true)}
+              className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold rounded-xl border border-slate-300 flex items-center gap-2 transition-all shadow-2xs"
+            >
+              <Calculator className="w-4 h-4 text-blue-600" />
+              <span>View Scoring Formula</span>
+            </button>
+
+            {/* Cumulative Grade Badge */}
+            <div className="flex items-center gap-4 bg-slate-900 text-white px-5 py-3 rounded-2xl border border-slate-800 shadow-md">
+              <div className="text-right">
+                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Cumulative Score</span>
+                <span className="text-2xl font-black text-blue-400">
+                  {auditBreakdown.overallCumulativeScore} <span className="text-xs text-slate-400 font-medium">/ 100</span>
+                </span>
+              </div>
+              <div className="w-12 h-12 rounded-xl bg-blue-600 text-white font-black text-2xl flex items-center justify-center shadow-lg shadow-blue-600/30">
+                {auditBreakdown.overallGrade}
+              </div>
             </div>
           </div>
         </div>
 
-        {/* 4 Pillars Breakdown Grid */}
+        {/* 4 Pillars Cumulative Breakdown Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Pillar 1: Operational Excellence */}
           <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2">
@@ -97,16 +154,18 @@ export const DashboardCOOPerformance: React.FC<DashboardCOOPerformanceProps> = (
               <span className="text-xs font-bold text-slate-900 uppercase text-[10px]">
                 Operational Excellence
               </span>
-              <span className="text-sm font-black text-blue-600">{autoGrade.scores.operationalExcellence} / 25</span>
+              <span className="text-sm font-black text-blue-600">
+                {auditBreakdown.operationalExcellence.score} / 25
+              </span>
             </div>
             <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
               <div
                 className="bg-blue-600 h-full rounded-full transition-all duration-500"
-                style={{ width: `${(autoGrade.scores.operationalExcellence / 25) * 100}%` }}
+                style={{ width: `${(auditBreakdown.operationalExcellence.score / 25) * 100}%` }}
               />
             </div>
             <p className="text-[10px] text-slate-500 font-medium">
-              Driven by department goal completion % & SLA execution.
+              Weighted Dept Goal Progress: {auditBreakdown.operationalExcellence.weightedDeptGoalProgressPct}%
             </p>
           </div>
 
@@ -116,16 +175,18 @@ export const DashboardCOOPerformance: React.FC<DashboardCOOPerformanceProps> = (
               <span className="text-xs font-bold text-slate-900 uppercase text-[10px]">
                 121 Leadership Cadence
               </span>
-              <span className="text-sm font-black text-emerald-600">{autoGrade.scores.teamLeadership} / 25</span>
+              <span className="text-sm font-black text-emerald-600">
+                {auditBreakdown.teamLeadership.score} / 25
+              </span>
             </div>
             <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
               <div
                 className="bg-emerald-600 h-full rounded-full transition-all duration-500"
-                style={{ width: `${(autoGrade.scores.teamLeadership / 25) * 100}%` }}
+                style={{ width: `${(auditBreakdown.teamLeadership.score / 25) * 100}%` }}
               />
             </div>
             <p className="text-[10px] text-slate-500 font-medium">
-              Driven by 121 session execution rate for Next Energy & Academy.
+              121s Executed: {auditBreakdown.teamLeadership.totalCompleted121s} ({auditBreakdown.teamLeadership.cadenceExecutionPct}% vs target)
             </p>
           </div>
 
@@ -135,16 +196,18 @@ export const DashboardCOOPerformance: React.FC<DashboardCOOPerformanceProps> = (
               <span className="text-xs font-bold text-slate-900 uppercase text-[10px]">
                 Strategic Time & Impact
               </span>
-              <span className="text-sm font-black text-amber-600">{autoGrade.scores.strategicGrowth} / 25</span>
+              <span className="text-sm font-black text-amber-600">
+                {auditBreakdown.strategicGrowth.score} / 25
+              </span>
             </div>
             <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
               <div
                 className="bg-amber-500 h-full rounded-full transition-all duration-500"
-                style={{ width: `${(autoGrade.scores.strategicGrowth / 25) * 100}%` }}
+                style={{ width: `${(auditBreakdown.strategicGrowth.score / 25) * 100}%` }}
               />
             </div>
             <p className="text-[10px] text-slate-500 font-medium">
-              Driven by High-Impact activity hours vs noise/distractions.
+              High Impact Ratio: {auditBreakdown.strategicGrowth.highImpactHoursRatioPct}%
             </p>
           </div>
 
@@ -154,16 +217,18 @@ export const DashboardCOOPerformance: React.FC<DashboardCOOPerformanceProps> = (
               <span className="text-xs font-bold text-slate-900 uppercase text-[10px]">
                 Wellness & Mastery
               </span>
-              <span className="text-sm font-black text-purple-600">{autoGrade.scores.personalMastery} / 25</span>
+              <span className="text-sm font-black text-purple-600">
+                {auditBreakdown.personalMastery.score} / 25
+              </span>
             </div>
             <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
               <div
                 className="bg-purple-600 h-full rounded-full transition-all duration-500"
-                style={{ width: `${(autoGrade.scores.personalMastery / 25) * 100}%` }}
+                style={{ width: `${(auditBreakdown.personalMastery.score / 25) * 100}%` }}
               />
             </div>
             <p className="text-[10px] text-slate-500 font-medium">
-              Driven by daily exercise, nutrition, and learning logs.
+              Wellness Logged Days: {auditBreakdown.personalMastery.wellnessDaysLogged}
             </p>
           </div>
         </div>
@@ -506,6 +571,180 @@ export const DashboardCOOPerformance: React.FC<DashboardCOOPerformanceProps> = (
           })}
         </div>
       </section>
+
+      {/* --- SCORING FORMULA AUDIT BREAKDOWN MODAL --- */}
+      {showFormulaModal && (
+        <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-xs z-50 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white border border-slate-200 rounded-2xl max-w-3xl w-full shadow-2xl overflow-hidden my-8">
+            <div className="bg-slate-900 text-white p-5 flex items-center justify-between border-b border-slate-800">
+              <div className="flex items-center gap-2.5">
+                <Calculator className="w-5 h-5 text-blue-400" />
+                <div>
+                  <h3 className="text-base font-bold text-slate-100">Automated Scoring Engine & Formula Audit</h3>
+                  <p className="text-[11px] text-slate-400">Exact mathematical weights, multipliers, and aggregated variables</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowFormulaModal(false)}
+                className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-6 text-xs text-slate-700">
+              {/* Evaluated Scope */}
+              <div className="bg-blue-50/60 border border-blue-200 p-4 rounded-xl flex items-center justify-between flex-wrap gap-2">
+                <div>
+                  <span className="font-extrabold text-blue-900 uppercase text-[10px] tracking-wider block">Months Evaluated</span>
+                  <span className="font-bold text-slate-800 text-sm">{auditBreakdown.monthsEvaluated.join(', ')}</span>
+                </div>
+                <div className="text-right">
+                  <span className="font-extrabold text-blue-900 uppercase text-[10px] tracking-wider block">Cumulative Score</span>
+                  <span className="font-black text-blue-600 text-xl">{auditBreakdown.overallCumulativeScore} / 100 ({auditBreakdown.overallGrade})</span>
+                </div>
+              </div>
+
+              {/* Goal Impact Level Multiplier Legend */}
+              <div className="bg-slate-50 border border-slate-200 p-4 rounded-xl space-y-2">
+                <span className="font-bold text-slate-900 text-xs flex items-center gap-1.5">
+                  <Sparkles className="w-4 h-4 text-amber-500" />
+                  Goal Impact Weighting Rules
+                </span>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                  <div className="bg-white p-2.5 rounded-lg border border-amber-200 text-amber-900">
+                    <span className="font-extrabold block text-[11px]">🔥 High Impact Goal</span>
+                    <span className="text-[10px] font-semibold text-amber-700">Multiplier: 1.5x Weight</span>
+                  </div>
+                  <div className="bg-white p-2.5 rounded-lg border border-blue-200 text-blue-900">
+                    <span className="font-extrabold block text-[11px]">⚡ Medium Impact Goal</span>
+                    <span className="text-[10px] font-semibold text-blue-700">Multiplier: 1.0x Weight</span>
+                  </div>
+                  <div className="bg-white p-2.5 rounded-lg border border-slate-200 text-slate-700">
+                    <span className="font-extrabold block text-[11px]">🌱 Low Impact Goal</span>
+                    <span className="text-[10px] font-semibold text-slate-500">Multiplier: 0.5x Weight</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Formula Breakdown Cards for 4 Pillars */}
+              <div className="space-y-4">
+                {/* Pillar 1 */}
+                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs space-y-2">
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                    <span className="font-bold text-slate-900 text-sm flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-blue-600" />
+                      1. Operational Excellence (Max 25 pts)
+                    </span>
+                    <span className="font-extrabold text-blue-600">{auditBreakdown.operationalExcellence.score} / 25 pts</span>
+                  </div>
+                  <p className="text-[11px] text-slate-600 font-medium leading-relaxed">
+                    <strong>Formula:</strong> {auditBreakdown.operationalExcellence.formulaText}
+                  </p>
+                  <div className="bg-slate-50 p-2.5 rounded-lg text-[11px] text-slate-700 font-mono space-y-1">
+                    <div>• Weighted Dept Goal Progress: <strong>{auditBreakdown.operationalExcellence.weightedDeptGoalProgressPct}%</strong></div>
+                    <div>• Dept Goals Impact Breakdown: High Impact ({auditBreakdown.operationalExcellence.impactWeightsApplied.highCount}), Medium ({auditBreakdown.operationalExcellence.impactWeightsApplied.mediumCount}), Low ({auditBreakdown.operationalExcellence.impactWeightsApplied.lowCount})</div>
+                  </div>
+                </div>
+
+                {/* Pillar 2 */}
+                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs space-y-2">
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                    <span className="font-bold text-slate-900 text-sm flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-emerald-600" />
+                      2. Team Leadership & 121 Cadence (Max 25 pts)
+                    </span>
+                    <span className="font-extrabold text-emerald-600">{auditBreakdown.teamLeadership.score} / 25 pts</span>
+                  </div>
+                  <p className="text-[11px] text-slate-600 font-medium leading-relaxed">
+                    <strong>Formula:</strong> {auditBreakdown.teamLeadership.formulaText}
+                  </p>
+                  <div className="bg-slate-50 p-2.5 rounded-lg text-[11px] text-slate-700 font-mono space-y-1">
+                    <div>• Completed 121 Sessions: <strong>{auditBreakdown.teamLeadership.totalCompleted121s} sessions</strong> across selected months</div>
+                    <div>• Cadence Execution Rate: <strong>{auditBreakdown.teamLeadership.cadenceExecutionPct}%</strong> (vs 10/month target)</div>
+                    <div>• Average Team Energy Rating: <strong>{auditBreakdown.teamLeadership.averageEnergyRating} / 5.0</strong></div>
+                  </div>
+                </div>
+
+                {/* Pillar 3 */}
+                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs space-y-2">
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                    <span className="font-bold text-slate-900 text-sm flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-amber-500" />
+                      3. Strategic Growth & Projects (Max 25 pts)
+                    </span>
+                    <span className="font-extrabold text-amber-600">{auditBreakdown.strategicGrowth.score} / 25 pts</span>
+                  </div>
+                  <p className="text-[11px] text-slate-600 font-medium leading-relaxed">
+                    <strong>Formula:</strong> {auditBreakdown.strategicGrowth.formulaText}
+                  </p>
+                  <div className="bg-slate-50 p-2.5 rounded-lg text-[11px] text-slate-700 font-mono space-y-1">
+                    <div>• High-Impact Time Ratio: <strong>{auditBreakdown.strategicGrowth.highImpactHoursRatioPct}%</strong> of total logged hours</div>
+                    <div>• Company Goal Impact-Weighted Milestones: <strong>{auditBreakdown.strategicGrowth.companyGoalMilestonePct}%</strong></div>
+                  </div>
+                </div>
+
+                {/* Pillar 4 */}
+                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs space-y-2">
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                    <span className="font-bold text-slate-900 text-sm flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-purple-600" />
+                      4. Personal Mastery & Wellness (Max 25 pts)
+                    </span>
+                    <span className="font-extrabold text-purple-600">{auditBreakdown.personalMastery.score} / 25 pts</span>
+                  </div>
+                  <p className="text-[11px] text-slate-600 font-medium leading-relaxed">
+                    <strong>Formula:</strong> {auditBreakdown.personalMastery.formulaText}
+                  </p>
+                  <div className="bg-slate-50 p-2.5 rounded-lg text-[11px] text-slate-700 font-mono space-y-1">
+                    <div>• Wellness Logs Consistency: <strong>{auditBreakdown.personalMastery.wellnessDaysLogged} days logged</strong> ({auditBreakdown.personalMastery.wellnessConsistencyPct}% vs 15/mo target)</div>
+                    <div>• Executive Reading Log Completion: <strong>{auditBreakdown.personalMastery.readingProgressPct}%</strong></div>
+                    <div>• Personal & Bible Goal Milestone Rate: <strong>{auditBreakdown.personalMastery.personalGoalCompletionPct}%</strong></div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Monthly Breakdown Table */}
+              <div className="space-y-2 pt-2">
+                <span className="font-bold text-slate-900 text-xs">Monthly Performance Trend Table</span>
+                <div className="overflow-x-auto rounded-xl border border-slate-200">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-slate-100 text-slate-700 font-bold border-b border-slate-200">
+                      <tr>
+                        <th className="p-2.5">Month</th>
+                        <th className="p-2.5">Monthly Score</th>
+                        <th className="p-2.5">Grade</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-200 font-medium">
+                      {auditBreakdown.monthlyScoresBreakdown.map((item) => (
+                        <tr key={item.month} className="hover:bg-slate-50">
+                          <td className="p-2.5 font-bold text-slate-900">{item.month}</td>
+                          <td className="p-2.5 font-extrabold text-blue-600">{item.overallScore} / 100</td>
+                          <td className="p-2.5">
+                            <span className="px-2 py-0.5 bg-blue-100 text-blue-800 font-black rounded-md">
+                              {item.grade}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-4 bg-slate-50 border-t border-slate-200 flex justify-end">
+              <button
+                onClick={() => setShowFormulaModal(false)}
+                className="px-5 py-2 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-500 shadow-sm"
+              >
+                Close Audit Breakdown
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

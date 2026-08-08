@@ -43,6 +43,7 @@ export const INITIAL_COMPANY_GOALS: CompanyGoal[] = [
     unit: 'RM Million',
     targetDate: '2026-12-31',
     overallRating: 'A',
+    impactLevel: 'High',
     milestones: [
       { id: 'cg_m1', title: 'Secure 15 Commercial Rooftop Contracts in Q1-Q2', targetDate: '2026-06-30', completed: true },
       { id: 'cg_m2', title: 'Implement Automated Supply Chain & Procurement System', targetDate: '2026-08-15', completed: true },
@@ -56,12 +57,17 @@ export const INITIAL_COMPANY_GOALS: CompanyGoal[] = [
     companyId: 'next_academy',
     title: 'Next Academy 2026 Clean Energy Upskilling Benchmark',
     description: 'Train 600 certified solar technicians & renewable energy engineers with 92% direct employment placement rate.',
-    targetMetric: 'Trained Graduates & Enterprise Cohorts',
+    targetMetric: 'Trained Graduates & Corporate Training Volume',
     currentValue: 420,
     targetValue: 600,
     unit: 'Graduates',
     targetDate: '2026-12-31',
     overallRating: 'A',
+    impactLevel: 'High',
+    academyRevenueCurrent: 1250000,
+    academyRevenueTarget: 1500000,
+    academyTrainingDaysCurrent: 95,
+    academyTrainingDaysTarget: 120,
     milestones: [
       { id: 'na_m1', title: 'Launch Advanced Battery Storage & Inverter Certification Course', targetDate: '2026-03-31', completed: true },
       { id: 'na_m2', title: 'Partner with 10 Commercial Solar Installers for Graduate Placement', targetDate: '2026-07-31', completed: true },
@@ -85,6 +91,7 @@ export const INITIAL_DEPARTMENT_GOALS: DepartmentGoal[] = [
     progressPercent: 78,
     status: 'On Track',
     targetDate: '2026-09-30',
+    impactLevel: 'High',
     milestones: [
       { id: 'm_s1', title: 'Close 5 C&I Solar Deals in Selangor & Penang', completed: true },
       { id: 'm_s2', title: 'Onboard 2 Key Enterprise Corporate Accounts', completed: true },
@@ -104,6 +111,7 @@ export const INITIAL_DEPARTMENT_GOALS: DepartmentGoal[] = [
     progressPercent: 85,
     status: 'On Track',
     targetDate: '2026-09-15',
+    impactLevel: 'Medium',
     milestones: [
       { id: 'm_a1', title: 'Digitize 100% of Vendor Invoices & Purchase Orders', completed: true },
       { id: 'm_a2', title: 'Reduce TNB NEM Application Lead Time by 25%', completed: true },
@@ -122,6 +130,7 @@ export const INITIAL_DEPARTMENT_GOALS: DepartmentGoal[] = [
     progressPercent: 70,
     status: 'At Risk',
     targetDate: '2026-10-15',
+    impactLevel: 'Medium',
     milestones: [
       { id: 'm_h1', title: 'Conduct Q2 Employee Engagement & Retention Review', completed: true },
       { id: 'm_h2', title: 'Onboard 2 Senior Site Installation Leads', completed: false },
@@ -140,6 +149,7 @@ export const INITIAL_DEPARTMENT_GOALS: DepartmentGoal[] = [
     progressPercent: 82,
     status: 'On Track',
     targetDate: '2026-11-30',
+    impactLevel: 'High',
     milestones: [
       { id: 'm_p1', title: 'Pass DOSH Safety Inspection for all 8 Active Sites', completed: true },
       { id: 'm_p2', title: 'Commission 5 MWp Rooftop System in Shah Alam', completed: true },
@@ -159,6 +169,7 @@ export const INITIAL_DEPARTMENT_GOALS: DepartmentGoal[] = [
     progressPercent: 90,
     status: 'On Track',
     targetDate: '2026-12-31',
+    impactLevel: 'Medium',
     milestones: [
       { id: 'm_c1', title: 'Implement WhatsApp Business API for Client Support SLA', completed: true },
       { id: 'm_c2', title: 'Launch 24/7 Inverter Alert Monitoring Dashboard', completed: true },
@@ -177,6 +188,7 @@ export const INITIAL_DEPARTMENT_GOALS: DepartmentGoal[] = [
     progressPercent: 65,
     status: 'At Risk',
     targetDate: '2026-09-30',
+    impactLevel: 'Medium',
     milestones: [
       { id: 'm_m1', title: 'Publish C&I Solar ROI Case Study Video Series', completed: true },
       { id: 'm_m2', title: 'Host Executive Renewable Energy Roundtable with Industry Bosses', completed: false },
@@ -197,6 +209,11 @@ export const INITIAL_DEPARTMENT_GOALS: DepartmentGoal[] = [
     progressPercent: 88,
     status: 'On Track',
     targetDate: '2026-09-30',
+    impactLevel: 'High',
+    academyRevenueCurrent: 450000,
+    academyRevenueTarget: 500000,
+    academyTrainingDaysCurrent: 35,
+    academyTrainingDaysTarget: 40,
     milestones: [
       { id: 'm_nam1', title: 'Obtain HRD Corp Full Accreditation for PV Design Course', completed: true },
       { id: 'm_nam2', title: 'Finalize Industry Speaker Partnerships', completed: true },
@@ -215,6 +232,9 @@ export const INITIAL_DEPARTMENT_GOALS: DepartmentGoal[] = [
     progressPercent: 92,
     status: 'On Track',
     targetDate: '2026-10-31',
+    impactLevel: 'High',
+    academyTrainingDaysCurrent: 40,
+    academyTrainingDaysTarget: 45,
     milestones: [
       { id: 'm_nat1', title: 'Upgrade Solar Simulator & High-Voltage Testing Bench', completed: true },
       { id: 'm_nat2', title: 'Publish Updated Practical Assessment Rubric', completed: true },
@@ -233,6 +253,11 @@ export const INITIAL_DEPARTMENT_GOALS: DepartmentGoal[] = [
     progressPercent: 75,
     status: 'On Track',
     targetDate: '2026-09-30',
+    impactLevel: 'High',
+    academyRevenueCurrent: 800000,
+    academyRevenueTarget: 1000000,
+    academyTrainingDaysCurrent: 20,
+    academyTrainingDaysTarget: 35,
     milestones: [
       { id: 'm_nas1', title: 'Secure 4 Enterprise Solar Installer Training Contracts', completed: true },
       { id: 'm_nas2', title: 'Launch B2B Email Outreach Campaign', completed: true },
@@ -251,6 +276,7 @@ export const INITIAL_DEPARTMENT_GOALS: DepartmentGoal[] = [
     progressPercent: 95,
     status: 'Completed',
     targetDate: '2026-08-31',
+    impactLevel: 'Medium',
     milestones: [
       { id: 'm_naa1', title: 'Deploy Digital Badge & E-Certificate Generation System', completed: true },
       { id: 'm_naa2', title: 'Automate HRD Corp Claim Documentation Workflow', completed: true },
