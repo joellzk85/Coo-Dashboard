@@ -9,7 +9,9 @@ import {
   COOLearningReflection,
   ReadingLog,
   PersonalGoalAndBible,
-  CompanyId
+  WellnessLog,
+  CompanyId,
+  Milestone
 } from '../types/dashboard';
 import {
   INITIAL_DEPARTMENTS,
@@ -20,10 +22,9 @@ import {
   INITIAL_ACTIVITY_LOGS,
   INITIAL_REFLECTIONS,
   INITIAL_READING_LOGS,
-  INITIAL_PERSONAL_AND_BIBLE
+  INITIAL_PERSONAL_AND_BIBLE,
+  INITIAL_WELLNESS_LOGS
 } from '../data/initialSeedData';
-import { db, handleFirestoreError, OperationType } from '../lib/firebase';
-import { collection, doc, setDoc, deleteDoc, onSnapshot, getDocs } from 'firebase/firestore';
 
 interface DashboardContextType {
   selectedCompany: CompanyId | 'all';
@@ -40,27 +41,31 @@ interface DashboardContextType {
   reflections: COOLearningReflection[];
   readingLogs: ReadingLog[];
   personalGoalsAndBible: PersonalGoalAndBible[];
+  wellnessLogs: WellnessLog[];
 
-  // Real-time / connection state
-  isFirebaseSynced: boolean;
-  isOnline: boolean;
-
-  // Goal actions
+  // Goal CRUD actions
   addCompanyGoal: (goal: Omit<CompanyGoal, 'id' | 'lastUpdated'>) => void;
   updateCompanyGoal: (id: string, goal: Partial<CompanyGoal>) => void;
   deleteCompanyGoal: (id: string) => void;
+  toggleCompanyMilestone: (companyGoalId: string, milestoneId: string) => void;
 
   addDepartmentGoal: (goal: Omit<DepartmentGoal, 'id' | 'lastUpdated'>) => void;
   updateDepartmentGoal: (id: string, goal: Partial<DepartmentGoal>) => void;
   deleteDepartmentGoal: (id: string) => void;
+  toggleDepartmentMilestone: (deptGoalId: string, milestoneId: string) => void;
 
   // 121 Session actions
   add121Session: (session: Omit<Session121, 'id' | 'createdAt'>) => void;
   update121Session: (id: string, session: Partial<Session121>) => void;
   delete121Session: (id: string) => void;
 
-  // KPI Grading actions
-  saveKPIGrade: (grade: Omit<MonthlyKPIGrade, 'id' | 'lastUpdated'>) => void;
+  // Automated KPI Grading
+  getAutomatedKPIGradeForMonth: (monthYear: string) => MonthlyKPIGrade;
+
+  // Personal Wellness actions
+  addWellnessLog: (log: Omit<WellnessLog, 'id' | 'createdAt'>) => void;
+  updateWellnessLog: (id: string, log: Partial<WellnessLog>) => void;
+  deleteWellnessLog: (id: string) => void;
 
   // Activity Impact actions
   addActivityLog: (log: Omit<ActivityImpactLog, 'id'>) => void;
@@ -87,14 +92,15 @@ interface DashboardContextType {
 }
 
 const STORAGE_KEYS = {
-  COMPANY_GOALS: 'next_coo_company_goals_v1',
-  DEPT_GOALS: 'next_coo_dept_goals_v1',
-  SESSIONS_121: 'next_coo_sessions_121_v1',
-  KPI_GRADES: 'next_coo_kpi_grades_v1',
-  ACTIVITY_LOGS: 'next_coo_activity_logs_v1',
-  REFLECTIONS: 'next_coo_reflections_v1',
-  READING_LOGS: 'next_coo_reading_logs_v1',
-  PERSONAL_BIBLE: 'next_coo_personal_bible_v1',
+  COMPANY_GOALS: 'next_coo_company_goals_v2',
+  DEPT_GOALS: 'next_coo_dept_goals_v2',
+  SESSIONS_121: 'next_coo_sessions_121_v2',
+  KPI_GRADES: 'next_coo_kpi_grades_v2',
+  ACTIVITY_LOGS: 'next_coo_activity_logs_v2',
+  REFLECTIONS: 'next_coo_reflections_v2',
+  READING_LOGS: 'next_coo_reading_logs_v2',
+  PERSONAL_BIBLE: 'next_coo_personal_bible_v2',
+  WELLNESS_LOGS: 'next_coo_wellness_logs_v2',
 };
 
 function getLocalOrInitial<T>(key: string, initialValue: T): T {
@@ -131,9 +137,7 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [sessions121, setSessions121] = useState<Session121[]>(() =>
     getLocalOrInitial(STORAGE_KEYS.SESSIONS_121, INITIAL_121_SESSIONS)
   );
-  const [kpiGrades, setKpiGrades] = useState<MonthlyKPIGrade[]>(() =>
-    getLocalOrInitial(STORAGE_KEYS.KPI_GRADES, INITIAL_KPI_GRADES)
-  );
+  const [kpiGrades] = useState<MonthlyKPIGrade[]>(INITIAL_KPI_GRADES);
   const [activityLogs, setActivityLogs] = useState<ActivityImpactLog[]>(() =>
     getLocalOrInitial(STORAGE_KEYS.ACTIVITY_LOGS, INITIAL_ACTIVITY_LOGS)
   );
@@ -146,64 +150,21 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [personalGoalsAndBible, setPersonalGoalsAndBible] = useState<PersonalGoalAndBible[]>(() =>
     getLocalOrInitial(STORAGE_KEYS.PERSONAL_BIBLE, INITIAL_PERSONAL_AND_BIBLE)
   );
+  const [wellnessLogs, setWellnessLogs] = useState<WellnessLog[]>(() =>
+    getLocalOrInitial(STORAGE_KEYS.WELLNESS_LOGS, INITIAL_WELLNESS_LOGS)
+  );
 
-  const [isFirebaseSynced, setIsFirebaseSynced] = useState<boolean>(false);
-  const [isOnline] = useState<boolean>(true);
-
-  // Sync to local storage
+  // Sync state to LocalStorage
   useEffect(() => { saveLocal(STORAGE_KEYS.COMPANY_GOALS, companyGoals); }, [companyGoals]);
   useEffect(() => { saveLocal(STORAGE_KEYS.DEPT_GOALS, departmentGoals); }, [departmentGoals]);
   useEffect(() => { saveLocal(STORAGE_KEYS.SESSIONS_121, sessions121); }, [sessions121]);
-  useEffect(() => { saveLocal(STORAGE_KEYS.KPI_GRADES, kpiGrades); }, [kpiGrades]);
   useEffect(() => { saveLocal(STORAGE_KEYS.ACTIVITY_LOGS, activityLogs); }, [activityLogs]);
   useEffect(() => { saveLocal(STORAGE_KEYS.REFLECTIONS, reflections); }, [reflections]);
   useEffect(() => { saveLocal(STORAGE_KEYS.READING_LOGS, readingLogs); }, [readingLogs]);
   useEffect(() => { saveLocal(STORAGE_KEYS.PERSONAL_BIBLE, personalGoalsAndBible); }, [personalGoalsAndBible]);
+  useEffect(() => { saveLocal(STORAGE_KEYS.WELLNESS_LOGS, wellnessLogs); }, [wellnessLogs]);
 
-  // Optional Firestore Real-time Listeners
-  useEffect(() => {
-    let unsubscribeCompanyGoals: () => void;
-    try {
-      unsubscribeCompanyGoals = onSnapshot(
-        collection(db, 'companyGoals'),
-        (snapshot) => {
-          if (!snapshot.empty) {
-            const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as CompanyGoal));
-            setCompanyGoals(items);
-            setIsFirebaseSynced(true);
-          }
-        },
-        (error) => {
-          console.info('Firestore offline mode or fallback to local state:', error.message);
-          setIsFirebaseSynced(false);
-        }
-      );
-    } catch {
-      setIsFirebaseSynced(false);
-    }
-    return () => {
-      if (unsubscribeCompanyGoals) unsubscribeCompanyGoals();
-    };
-  }, []);
-
-  // Sync Helper to Firestore
-  const syncToFirestore = async (collectionName: string, id: string, data: any) => {
-    try {
-      await setDoc(doc(db, collectionName, id), data, { merge: true });
-    } catch (e) {
-      // Local fallback is already updated
-    }
-  };
-
-  const deleteFromFirestore = async (collectionName: string, id: string) => {
-    try {
-      await deleteDoc(doc(db, collectionName, id));
-    } catch (e) {
-      // Local fallback handled
-    }
-  };
-
-  // Company Goals
+  // --- Company Goals CRUD ---
   const addCompanyGoal = (goal: Omit<CompanyGoal, 'id' | 'lastUpdated'>) => {
     const newGoal: CompanyGoal = {
       ...goal,
@@ -211,28 +172,33 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       lastUpdated: new Date().toISOString().split('T')[0],
     };
     setCompanyGoals(prev => [newGoal, ...prev]);
-    syncToFirestore('companyGoals', newGoal.id, newGoal);
   };
 
   const updateCompanyGoal = (id: string, partial: Partial<CompanyGoal>) => {
     setCompanyGoals(prev =>
-      prev.map(item => {
-        if (item.id === id) {
-          const updated = { ...item, ...partial, lastUpdated: new Date().toISOString().split('T')[0] };
-          syncToFirestore('companyGoals', id, updated);
-          return updated;
-        }
-        return item;
-      })
+      prev.map(item => (item.id === id ? { ...item, ...partial, lastUpdated: new Date().toISOString().split('T')[0] } : item))
     );
   };
 
   const deleteCompanyGoal = (id: string) => {
     setCompanyGoals(prev => prev.filter(item => item.id !== id));
-    deleteFromFirestore('companyGoals', id);
   };
 
-  // Department Goals
+  const toggleCompanyMilestone = (companyGoalId: string, milestoneId: string) => {
+    setCompanyGoals(prev =>
+      prev.map(goal => {
+        if (goal.id === companyGoalId) {
+          const updatedMilestones = goal.milestones.map(m =>
+            m.id === milestoneId ? { ...m, completed: !m.completed } : m
+          );
+          return { ...goal, milestones: updatedMilestones, lastUpdated: new Date().toISOString().split('T')[0] };
+        }
+        return goal;
+      })
+    );
+  };
+
+  // --- Department Goals CRUD ---
   const addDepartmentGoal = (goal: Omit<DepartmentGoal, 'id' | 'lastUpdated'>) => {
     const newGoal: DepartmentGoal = {
       ...goal,
@@ -240,28 +206,33 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       lastUpdated: new Date().toISOString().split('T')[0],
     };
     setDepartmentGoals(prev => [newGoal, ...prev]);
-    syncToFirestore('departmentGoals', newGoal.id, newGoal);
   };
 
   const updateDepartmentGoal = (id: string, partial: Partial<DepartmentGoal>) => {
     setDepartmentGoals(prev =>
-      prev.map(item => {
-        if (item.id === id) {
-          const updated = { ...item, ...partial, lastUpdated: new Date().toISOString().split('T')[0] };
-          syncToFirestore('departmentGoals', id, updated);
-          return updated;
-        }
-        return item;
-      })
+      prev.map(item => (item.id === id ? { ...item, ...partial, lastUpdated: new Date().toISOString().split('T')[0] } : item))
     );
   };
 
   const deleteDepartmentGoal = (id: string) => {
     setDepartmentGoals(prev => prev.filter(item => item.id !== id));
-    deleteFromFirestore('departmentGoals', id);
   };
 
-  // 121 Sessions
+  const toggleDepartmentMilestone = (deptGoalId: string, milestoneId: string) => {
+    setDepartmentGoals(prev =>
+      prev.map(goal => {
+        if (goal.id === deptGoalId) {
+          const updatedMilestones = goal.milestones.map(m =>
+            m.id === milestoneId ? { ...m, completed: !m.completed } : m
+          );
+          return { ...goal, milestones: updatedMilestones, lastUpdated: new Date().toISOString().split('T')[0] };
+        }
+        return goal;
+      })
+    );
+  };
+
+  // --- 121 Sessions CRUD ---
   const add121Session = (session: Omit<Session121, 'id' | 'createdAt'>) => {
     const newSession: Session121 = {
       ...session,
@@ -269,138 +240,197 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       createdAt: new Date().toISOString(),
     };
     setSessions121(prev => [newSession, ...prev]);
-    syncToFirestore('sessions121', newSession.id, newSession);
   };
 
   const update121Session = (id: string, partial: Partial<Session121>) => {
     setSessions121(prev =>
-      prev.map(item => {
-        if (item.id === id) {
-          const updated = { ...item, ...partial };
-          syncToFirestore('sessions121', id, updated);
-          return updated;
-        }
-        return item;
-      })
+      prev.map(item => (item.id === id ? { ...item, ...partial } : item))
     );
   };
 
   const delete121Session = (id: string) => {
     setSessions121(prev => prev.filter(item => item.id !== id));
-    deleteFromFirestore('sessions121', id);
   };
 
-  // KPI Grades
-  const saveKPIGrade = (grade: Omit<MonthlyKPIGrade, 'id' | 'lastUpdated'>) => {
-    const id = `kpi_${grade.monthYear.replace('-', '_')}`;
-    const newGrade: MonthlyKPIGrade = {
-      ...grade,
-      id,
-      lastUpdated: new Date().toISOString().split('T')[0],
-    };
-    setKpiGrades(prev => {
-      const filtered = prev.filter(item => item.monthYear !== grade.monthYear);
-      return [newGrade, ...filtered];
-    });
-    syncToFirestore('kpiGrades', id, newGrade);
-  };
-
-  // Activity Logs
-  const addActivityLog = (log: Omit<ActivityImpactLog, 'id'>) => {
-    const newLog: ActivityImpactLog = {
+  // --- Personal Wellness Logs CRUD ---
+  const addWellnessLog = (log: Omit<WellnessLog, 'id' | 'createdAt'>) => {
+    const newLog: WellnessLog = {
       ...log,
-      id: `act_${Date.now()}`,
+      id: `well_${Date.now()}`,
+      createdAt: new Date().toISOString(),
     };
+    setWellnessLogs(prev => [newLog, ...prev]);
+  };
+
+  const updateWellnessLog = (id: string, partial: Partial<WellnessLog>) => {
+    setWellnessLogs(prev =>
+      prev.map(item => (item.id === id ? { ...item, ...partial } : item))
+    );
+  };
+
+  const deleteWellnessLog = (id: string) => {
+    setWellnessLogs(prev => prev.filter(item => item.id !== id));
+  };
+
+  // --- Activity Logs ---
+  const addActivityLog = (log: Omit<ActivityImpactLog, 'id'>) => {
+    const newLog: ActivityImpactLog = { ...log, id: `act_${Date.now()}` };
     setActivityLogs(prev => [newLog, ...prev]);
-    syncToFirestore('activityLogs', newLog.id, newLog);
   };
 
   const deleteActivityLog = (id: string) => {
     setActivityLogs(prev => prev.filter(item => item.id !== id));
-    deleteFromFirestore('activityLogs', id);
   };
 
-  // Reflections
+  // --- Reflections ---
   const addReflection = (reflection: Omit<COOLearningReflection, 'id'>) => {
-    const newRef: COOLearningReflection = {
-      ...reflection,
-      id: `ref_${Date.now()}`,
-    };
+    const newRef: COOLearningReflection = { ...reflection, id: `ref_${Date.now()}` };
     setReflections(prev => [newRef, ...prev]);
-    syncToFirestore('reflections', newRef.id, newRef);
   };
 
   const deleteReflection = (id: string) => {
     setReflections(prev => prev.filter(item => item.id !== id));
-    deleteFromFirestore('reflections', id);
   };
 
-  // Reading Logs
+  // --- Reading Logs ---
   const addReadingLog = (log: Omit<ReadingLog, 'id'>) => {
-    const newLog: ReadingLog = {
-      ...log,
-      id: `book_${Date.now()}`,
-    };
+    const newLog: ReadingLog = { ...log, id: `book_${Date.now()}` };
     setReadingLogs(prev => [newLog, ...prev]);
-    syncToFirestore('readingLogs', newLog.id, newLog);
   };
 
   const updateReadingLog = (id: string, partial: Partial<ReadingLog>) => {
     setReadingLogs(prev =>
-      prev.map(item => {
-        if (item.id === id) {
-          const updated = { ...item, ...partial };
-          syncToFirestore('readingLogs', id, updated);
-          return updated;
-        }
-        return item;
-      })
+      prev.map(item => (item.id === id ? { ...item, ...partial } : item))
     );
   };
 
   const deleteReadingLog = (id: string) => {
     setReadingLogs(prev => prev.filter(item => item.id !== id));
-    deleteFromFirestore('readingLogs', id);
   };
 
-  // Personal Goal & Bible
+  // --- Personal Goal & Bible ---
   const addPersonalGoalOrBible = (item: Omit<PersonalGoalAndBible, 'id'>) => {
-    const newItem: PersonalGoalAndBible = {
-      ...item,
-      id: `pb_${Date.now()}`,
-    };
+    const newItem: PersonalGoalAndBible = { ...item, id: `pb_${Date.now()}` };
     setPersonalGoalsAndBible(prev => [newItem, ...prev]);
-    syncToFirestore('personalGoalsAndBible', newItem.id, newItem);
   };
 
   const togglePersonalGoalOrBible = (id: string) => {
     setPersonalGoalsAndBible(prev =>
-      prev.map(item => {
-        if (item.id === id) {
-          const updated = { ...item, completed: !item.completed };
-          syncToFirestore('personalGoalsAndBible', id, updated);
-          return updated;
-        }
-        return item;
-      })
+      prev.map(item => (item.id === id ? { ...item, completed: !item.completed } : item))
     );
   };
 
   const deletePersonalGoalOrBible = (id: string) => {
     setPersonalGoalsAndBible(prev => prev.filter(item => item.id !== id));
-    deleteFromFirestore('personalGoalsAndBible', id);
   };
 
-  // Reset to Demo Data
+  // --- AUTOMATED KPI GRADING ENGINE ---
+  const getAutomatedKPIGradeForMonth = (monthYear: string): MonthlyKPIGrade => {
+    // 1. Operational Excellence (Max 25 pts)
+    // Filter department goals for current company scope
+    const relevantDeptGoals = departmentGoals.filter(
+      g => selectedCompany === 'all' || g.companyId === selectedCompany
+    );
+    const avgProgress = relevantDeptGoals.length > 0
+      ? relevantDeptGoals.reduce((acc, g) => acc + g.progressPercent, 0) / relevantDeptGoals.length
+      : 80;
+    
+    let totalDeptMilestones = 0;
+    let completedDeptMilestones = 0;
+    relevantDeptGoals.forEach(g => {
+      g.milestones.forEach(m => {
+        totalDeptMilestones++;
+        if (m.completed) completedDeptMilestones++;
+      });
+    });
+    const deptMilestoneRate = totalDeptMilestones > 0 ? (completedDeptMilestones / totalDeptMilestones) * 100 : 80;
+    const opScore = Math.min(25, Math.max(0, Math.round(((avgProgress * 0.7 + deptMilestoneRate * 0.3) / 100) * 25)));
+
+    // 2. Team Leadership & 121 Cadence (Max 25 pts)
+    const monthSessions = sessions121.filter(s => s.monthYear === monthYear && (selectedCompany === 'all' || s.companyId === selectedCompany));
+    const completedSessions = monthSessions.filter(s => s.status === 'Completed').length;
+    // Target 121s for a month is approx 10 completed sessions
+    const cadenceExecutionPct = Math.min(100, (completedSessions / 10) * 100);
+    const avgEnergy = monthSessions.length > 0
+      ? monthSessions.reduce((acc, s) => acc + s.energyRating, 0) / monthSessions.length
+      : 4.5;
+    const teamScore = Math.min(25, Math.max(0, Math.round(((cadenceExecutionPct * 0.8 + (avgEnergy / 5) * 20) / 100) * 25)));
+
+    // 3. Strategic Growth & Projects (Max 25 pts)
+    const monthActivities = activityLogs.filter(a => a.date.startsWith(monthYear));
+    const totalHours = monthActivities.reduce((acc, a) => acc + a.hoursSpent, 0);
+    const highImpactHours = monthActivities.filter(a => a.impactTag === 'High Impact').reduce((acc, a) => acc + a.hoursSpent, 0);
+    const highImpactRatio = totalHours > 0 ? (highImpactHours / totalHours) * 100 : 75;
+
+    const relevantCompanyGoals = companyGoals.filter(cg => selectedCompany === 'all' || cg.companyId === selectedCompany);
+    let totalCgMs = 0;
+    let completedCgMs = 0;
+    relevantCompanyGoals.forEach(cg => {
+      cg.milestones.forEach(m => {
+        totalCgMs++;
+        if (m.completed) completedCgMs++;
+      });
+    });
+    const cgMilestonePct = totalCgMs > 0 ? (completedCgMs / totalCgMs) * 100 : 75;
+    const stratScore = Math.min(25, Math.max(0, Math.round(((highImpactRatio * 0.5 + cgMilestonePct * 0.5) / 100) * 25)));
+
+    // 4. Personal Mastery & Wellness (Max 25 pts)
+    const monthWellness = wellnessLogs.filter(w => w.date.startsWith(monthYear));
+    const wellnessLoggedDays = monthWellness.length;
+    const wellnessConsistencyPct = Math.min(100, (wellnessLoggedDays / 15) * 100); // 15 days target
+    
+    const completedBooks = readingLogs.filter(b => b.status === 'Completed').length;
+    const totalBooks = readingLogs.length;
+    const readingPct = totalBooks > 0 ? (completedBooks / totalBooks) * 100 : 70;
+
+    const completedPersonalGoals = personalGoalsAndBible.filter(p => p.completed).length;
+    const personalGoalsPct = personalGoalsAndBible.length > 0 ? (completedPersonalGoals / personalGoalsAndBible.length) * 100 : 60;
+
+    const masteryScore = Math.min(25, Math.max(0, Math.round(((wellnessConsistencyPct * 0.4 + readingPct * 0.3 + personalGoalsPct * 0.3) / 100) * 25)));
+
+    // Overall Score Calculation
+    const overallScore = opScore + teamScore + stratScore + masteryScore;
+
+    let grade: 'A+' | 'A' | 'B' | 'C' | 'D' | 'F' = 'B';
+    if (overallScore >= 95) grade = 'A+';
+    else if (overallScore >= 90) grade = 'A';
+    else if (overallScore >= 80) grade = 'B';
+    else if (overallScore >= 70) grade = 'C';
+    else if (overallScore >= 60) grade = 'D';
+    else grade = 'F';
+
+    return {
+      id: `kpi_auto_${monthYear}`,
+      monthYear,
+      overallScore,
+      grade,
+      scores: {
+        operationalExcellence: opScore,
+        teamLeadership: teamScore,
+        strategicGrowth: stratScore,
+        personalMastery: masteryScore,
+      },
+      notes: {
+        operationalExcellenceNote: `Dept Goals Avg Progress: ${Math.round(avgProgress)}% | Milestone Execution: ${Math.round(deptMilestoneRate)}%`,
+        teamLeadershipNote: `121 Sessions Completed: ${completedSessions}/10 Target | Avg Team Energy: ${avgEnergy.toFixed(1)}/5`,
+        strategicGrowthNote: `High-Impact Hours Ratio: ${Math.round(highImpactRatio)}% | Company Goal Milestones: ${Math.round(cgMilestonePct)}%`,
+        personalMasteryNote: `Wellness Days Logged: ${wellnessLoggedDays} | Reading & Growth Progress: ${Math.round(readingPct)}%`,
+      },
+      reflections: `Automated grading engine computed live from ${monthYear} actual execution rates, daily wellness logs, and 121 cadences.`,
+      lastUpdated: new Date().toISOString().split('T')[0],
+    };
+  };
+
+  // --- Reset & Import/Export ---
   const resetToDemoData = () => {
     setCompanyGoals(INITIAL_COMPANY_GOALS);
     setDepartmentGoals(INITIAL_DEPARTMENT_GOALS);
     setSessions121(INITIAL_121_SESSIONS);
-    setKpiGrades(INITIAL_KPI_GRADES);
     setActivityLogs(INITIAL_ACTIVITY_LOGS);
     setReflections(INITIAL_REFLECTIONS);
     setReadingLogs(INITIAL_READING_LOGS);
     setPersonalGoalsAndBible(INITIAL_PERSONAL_AND_BIBLE);
+    setWellnessLogs(INITIAL_WELLNESS_LOGS);
     localStorage.clear();
   };
 
@@ -409,11 +439,11 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       companyGoals,
       departmentGoals,
       sessions121,
-      kpiGrades,
       activityLogs,
       reflections,
       readingLogs,
       personalGoalsAndBible,
+      wellnessLogs,
       exportedAt: new Date().toISOString(),
     };
     return JSON.stringify(data, null, 2);
@@ -425,11 +455,11 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       if (parsed.companyGoals) setCompanyGoals(parsed.companyGoals);
       if (parsed.departmentGoals) setDepartmentGoals(parsed.departmentGoals);
       if (parsed.sessions121) setSessions121(parsed.sessions121);
-      if (parsed.kpiGrades) setKpiGrades(parsed.kpiGrades);
       if (parsed.activityLogs) setActivityLogs(parsed.activityLogs);
       if (parsed.reflections) setReflections(parsed.reflections);
       if (parsed.readingLogs) setReadingLogs(parsed.readingLogs);
       if (parsed.personalGoalsAndBible) setPersonalGoalsAndBible(parsed.personalGoalsAndBible);
+      if (parsed.wellnessLogs) setWellnessLogs(parsed.wellnessLogs);
       return true;
     } catch (e) {
       console.error('Failed to import JSON data:', e);
@@ -453,18 +483,22 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         reflections,
         readingLogs,
         personalGoalsAndBible,
-        isFirebaseSynced,
-        isOnline,
+        wellnessLogs,
         addCompanyGoal,
         updateCompanyGoal,
         deleteCompanyGoal,
+        toggleCompanyMilestone,
         addDepartmentGoal,
         updateDepartmentGoal,
         deleteDepartmentGoal,
+        toggleDepartmentMilestone,
         add121Session,
         update121Session,
         delete121Session,
-        saveKPIGrade,
+        getAutomatedKPIGradeForMonth,
+        addWellnessLog,
+        updateWellnessLog,
+        deleteWellnessLog,
         addActivityLog,
         deleteActivityLog,
         addReflection,

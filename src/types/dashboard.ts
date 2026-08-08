@@ -145,3 +145,28 @@ export interface PersonalGoalAndBible {
   targetDate: string;
   completed: boolean;
 }
+
+export interface WellnessLog {
+  id: string;
+  date: string; // YYYY-MM-DD
+  foodIntake: {
+    breakfast: string;
+    lunch: string;
+    dinner: string;
+    snacks: string;
+    waterIntakeLiters: number;
+    caloriesEstimate?: number;
+    notes: string;
+  };
+  movement: {
+    activityType: string; // e.g. Zone 2 Running, Gym Strength, Cardio Walk, Swimming
+    durationMinutes: number;
+    intensity: 'Light' | 'Moderate' | 'Vigorous' | 'Peak';
+    stepsCount?: number;
+    caloriesBurned?: number;
+    notes: string;
+  };
+  energyRating: number; // 1 to 5 or 1 to 10
+  createdAt: string;
+}
+

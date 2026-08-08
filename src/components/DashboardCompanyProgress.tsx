@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useDashboard } from '../context/DashboardContext';
-import { CompanyGoal, DepartmentGoal, Milestone } from '../types/dashboard';
+import { CompanyGoal, DepartmentGoal } from '../types/dashboard';
+import { EditGoalModal } from './Modals/EditGoalModal';
 import {
   TrendingUp,
   Zap,
@@ -8,16 +9,15 @@ import {
   Plus,
   CheckSquare,
   Square,
-  Edit2,
+  Edit3,
   Trash2,
   Calendar,
   AlertCircle,
   CheckCircle2,
   Clock,
-  ChevronRight,
-  Sparkles,
   Building2,
-  UserCheck
+  UserCheck,
+  Sparkles
 } from 'lucide-react';
 
 interface DashboardCompanyProgressProps {
@@ -30,12 +30,16 @@ export const DashboardCompanyProgress: React.FC<DashboardCompanyProgressProps> =
     companyGoals,
     departmentGoals,
     departments,
-    updateCompanyGoal,
-    updateDepartmentGoal,
+    toggleCompanyMilestone,
+    toggleDepartmentMilestone,
+    deleteCompanyGoal,
     deleteDepartmentGoal,
   } = useDashboard();
 
-  const [editingGoal, setEditingGoal] = useState<DepartmentGoal | null>(null);
+  const [editingGoal, setEditingGoal] = useState<{
+    type: 'company' | 'department';
+    data: CompanyGoal | DepartmentGoal;
+  } | null>(null);
 
   // Filter goals based on selected company tab
   const filteredCompanyGoals = companyGoals.filter(
@@ -49,34 +53,6 @@ export const DashboardCompanyProgress: React.FC<DashboardCompanyProgressProps> =
   // Group dept goals by company
   const nextEnergyDepts = departments.filter((d) => d.companyId === 'next_energy');
   const nextAcademyDepts = departments.filter((d) => d.companyId === 'next_academy');
-
-  const toggleCompanyMilestone = (goalId: string, milestoneId: string) => {
-    const goal = companyGoals.find((g) => g.id === goalId);
-    if (!goal) return;
-    const updatedMilestones = goal.milestones.map((m) =>
-      m.id === milestoneId ? { ...m, completed: !m.completed } : m
-    );
-    updateCompanyGoal(goalId, { milestones: updatedMilestones });
-  };
-
-  const toggleDeptMilestone = (goalId: string, milestoneId: string) => {
-    const goal = departmentGoals.find((g) => g.id === goalId);
-    if (!goal) return;
-    const updatedMilestones = goal.milestones.map((m) =>
-      m.id === milestoneId ? { ...m, completed: !m.completed } : m
-    );
-    // Recalculate progress % based on milestones completed
-    const completedCount = updatedMilestones.filter((m) => m.completed).length;
-    const newProgress = Math.round((completedCount / updatedMilestones.length) * 100);
-    const newStatus =
-      newProgress === 100 ? 'Completed' : newProgress >= 70 ? 'On Track' : 'At Risk';
-
-    updateDepartmentGoal(goalId, {
-      milestones: updatedMilestones,
-      progressPercent: newProgress,
-      status: newStatus,
-    });
-  };
 
   const getStatusBadge = (status: DepartmentGoal['status']) => {
     switch (status) {
@@ -120,7 +96,7 @@ export const DashboardCompanyProgress: React.FC<DashboardCompanyProgressProps> =
               <span>Company Big Goals & Milestone Tracker</span>
             </h2>
             <p className="text-xs text-slate-500 mt-1">
-              Macro-level strategic objectives for Next Energy & Next Academy with overall progress ratings.
+              Macro-level strategic objectives for Next Energy & Next Academy. Click edit to dynamically modify goals or add deliverables.
             </p>
           </div>
         </div>
@@ -136,7 +112,7 @@ export const DashboardCompanyProgress: React.FC<DashboardCompanyProgressProps> =
             return (
               <div
                 key={cg.id}
-                className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm relative overflow-hidden transition-all hover:shadow-md"
+                className="bg-white border border-slate-200 hover:border-blue-300 rounded-xl p-6 shadow-sm relative overflow-hidden transition-all"
               >
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex items-center gap-2">
@@ -152,10 +128,30 @@ export const DashboardCompanyProgress: React.FC<DashboardCompanyProgressProps> =
                     </span>
                   </div>
 
-                  {/* Rating Badge */}
-                  <div className="flex items-center gap-1.5 bg-slate-50 px-3 py-1 rounded-lg border border-slate-200">
-                    <span className="text-xs text-slate-500 font-semibold uppercase text-[10px]">Overall Rating:</span>
-                    <span className="text-sm font-black text-blue-600">{cg.overallRating}</span>
+                  <div className="flex items-center gap-2">
+                    {/* Rating Badge */}
+                    <div className="flex items-center gap-1.5 bg-slate-50 px-3 py-1 rounded-lg border border-slate-200">
+                      <span className="text-xs text-slate-500 font-semibold uppercase text-[10px]">Rating:</span>
+                      <span className="text-sm font-black text-blue-600">{cg.overallRating}</span>
+                    </div>
+
+                    {/* Edit Control */}
+                    <button
+                      onClick={() => setEditingGoal({ type: 'company', data: cg })}
+                      className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-slate-100 rounded-lg transition-colors"
+                      title="Edit Company Goal"
+                    >
+                      <Edit3 className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (window.confirm('Delete this Company Goal?')) deleteCompanyGoal(cg.id);
+                      }}
+                      className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-slate-100 rounded-lg transition-colors"
+                      title="Delete Goal"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   </div>
                 </div>
 
@@ -178,9 +174,7 @@ export const DashboardCompanyProgress: React.FC<DashboardCompanyProgressProps> =
                   <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
                     <div
                       className={`h-full rounded-full transition-all duration-500 ${
-                        isEnergy
-                          ? 'bg-blue-600'
-                          : 'bg-emerald-500'
+                        isEnergy ? 'bg-blue-600' : 'bg-emerald-500'
                       }`}
                       style={{ width: `${progressPercent}%` }}
                     />
@@ -196,9 +190,14 @@ export const DashboardCompanyProgress: React.FC<DashboardCompanyProgressProps> =
 
                 {/* Key Milestones checklist */}
                 <div className="mt-5 space-y-2">
-                  <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
-                    <Sparkles className="w-3.5 h-3.5 text-amber-500" /> Key Executive Milestones
-                  </h4>
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-amber-500" /> Key Executive Milestones
+                    </h4>
+                    <span className="text-[11px] text-slate-400 font-medium">
+                      {cg.milestones.filter(m => m.completed).length} / {cg.milestones.length}
+                    </span>
+                  </div>
 
                   <div className="space-y-1.5">
                     {cg.milestones.map((m) => (
@@ -294,7 +293,7 @@ export const DashboardCompanyProgress: React.FC<DashboardCompanyProgressProps> =
               <span>Departmental Goal Tracker</span>
             </h2>
             <p className="text-xs text-slate-500 mt-1">
-              Active operational goals, target completion dates, and milestone progress per department.
+              Active operational goals. Click edit on any card to amend titles, targets, or milestones dynamically.
             </p>
           </div>
 
@@ -328,7 +327,25 @@ export const DashboardCompanyProgress: React.FC<DashboardCompanyProgressProps> =
                       {dg.departmentName} (HOD: {dg.hodName})
                     </span>
 
-                    {getStatusBadge(dg.status)}
+                    <div className="flex items-center gap-1.5">
+                      {getStatusBadge(dg.status)}
+                      <button
+                        onClick={() => setEditingGoal({ type: 'department', data: dg })}
+                        className="p-1 text-slate-400 hover:text-blue-600 rounded transition-colors"
+                        title="Edit Department Goal"
+                      >
+                        <Edit3 className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (window.confirm('Delete this Department Goal?')) deleteDepartmentGoal(dg.id);
+                        }}
+                        className="p-1 text-slate-400 hover:text-rose-600 rounded transition-colors"
+                        title="Delete Goal"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </div>
 
                   <h3 className="text-base font-bold text-slate-900 tracking-tight group-hover:text-blue-600 transition-colors">
@@ -361,14 +378,19 @@ export const DashboardCompanyProgress: React.FC<DashboardCompanyProgressProps> =
 
                   {/* Milestones checklist */}
                   <div className="space-y-1.5 pt-1">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                      Key Deliverables
-                    </span>
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                        Key Deliverables
+                      </span>
+                      <span className="text-[10px] text-slate-400 font-medium">
+                        {dg.milestones.filter(m => m.completed).length} / {dg.milestones.length}
+                      </span>
+                    </div>
                     <div className="space-y-1 max-h-36 overflow-y-auto pr-1">
                       {dg.milestones.map((m) => (
                         <div
                           key={m.id}
-                          onClick={() => toggleDeptMilestone(dg.id, m.id)}
+                          onClick={() => toggleDepartmentMilestone(dg.id, m.id)}
                           className={`flex items-start gap-2 p-1.5 rounded cursor-pointer text-xs border ${
                             m.completed
                               ? 'bg-slate-50 text-slate-400 line-through border-slate-100'
@@ -389,25 +411,25 @@ export const DashboardCompanyProgress: React.FC<DashboardCompanyProgressProps> =
                   </div>
                 </div>
 
-                {/* Footer metadata & Delete */}
+                {/* Footer metadata */}
                 <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
                   <div className="flex items-center gap-1 font-medium">
                     <Calendar className="w-3 h-3 text-slate-400" /> Target: {dg.targetDate}
                   </div>
-
-                  <button
-                    onClick={() => deleteDepartmentGoal(dg.id)}
-                    className="text-slate-400 hover:text-rose-600 p-1 transition-colors"
-                    title="Delete goal"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
+                  <span className="text-[10px] font-semibold text-slate-400">Updated: {dg.lastUpdated}</span>
                 </div>
               </div>
             );
           })}
         </div>
       </section>
+
+      {/* Edit Modal */}
+      <EditGoalModal
+        isOpen={editingGoal !== null}
+        onClose={() => setEditingGoal(null)}
+        goalToEdit={editingGoal}
+      />
     </div>
   );
 };

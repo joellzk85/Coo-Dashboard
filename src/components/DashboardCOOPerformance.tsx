@@ -1,32 +1,22 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useDashboard } from '../context/DashboardContext';
-import {
-  MonthlyKPIGrade,
-  ActivityImpactLog,
-  COOLearningReflection,
-  ReadingLog,
-  PersonalGoalAndBible
-} from '../types/dashboard';
 import {
   Award,
   BookOpen,
-  BookMarked,
   Zap,
   TrendingUp,
-  Sliders,
   Plus,
   Trash2,
   CheckSquare,
   Square,
   Sparkles,
-  Calendar,
-  Layers,
-  Heart,
+  HeartPulse,
   Lightbulb,
   Clock,
   PieChart,
   Brain,
-  Bookmark
+  CheckCircle2,
+  Activity
 } from 'lucide-react';
 
 interface DashboardCOOPerformanceProps {
@@ -44,89 +34,21 @@ export const DashboardCOOPerformance: React.FC<DashboardCOOPerformanceProps> = (
 }) => {
   const {
     selectedMonth,
-    kpiGrades,
-    saveKPIGrade,
+    getAutomatedKPIGradeForMonth,
     activityLogs,
     deleteActivityLog,
     reflections,
     deleteReflection,
     readingLogs,
-    updateReadingLog,
     deleteReadingLog,
     personalGoalsAndBible,
     togglePersonalGoalOrBible,
     deletePersonalGoalOrBible,
+    wellnessLogs,
   } = useDashboard();
 
-  // Find existing grade for selected month or initialize defaults
-  const currentGradeObj = kpiGrades.find((g) => g.monthYear === selectedMonth) || {
-    id: `kpi_${selectedMonth.replace('-', '_')}`,
-    monthYear: selectedMonth,
-    overallScore: 85,
-    grade: 'A' as const,
-    scores: {
-      operationalExcellence: 21,
-      teamLeadership: 22,
-      strategicGrowth: 21,
-      personalMastery: 21,
-    },
-    notes: {
-      operationalExcellenceNote: '',
-      teamLeadershipNote: '',
-      strategicGrowthNote: '',
-      personalMasteryNote: '',
-    },
-    reflections: '',
-    lastUpdated: new Date().toISOString().split('T')[0],
-  };
-
-  const [opScore, setOpScore] = useState(currentGradeObj.scores.operationalExcellence);
-  const [teamScore, setTeamScore] = useState(currentGradeObj.scores.teamLeadership);
-  const [stratScore, setStratScore] = useState(currentGradeObj.scores.strategicGrowth);
-  const [masteryScore, setMasteryScore] = useState(currentGradeObj.scores.personalMastery);
-  const [monthlyReflections, setMonthlyReflections] = useState(currentGradeObj.reflections || '');
-
-  useEffect(() => {
-    setOpScore(currentGradeObj.scores.operationalExcellence);
-    setTeamScore(currentGradeObj.scores.teamLeadership);
-    setStratScore(currentGradeObj.scores.strategicGrowth);
-    setMasteryScore(currentGradeObj.scores.personalMastery);
-    setMonthlyReflections(currentGradeObj.reflections || '');
-  }, [selectedMonth, currentGradeObj]);
-
-  const totalScore = opScore + teamScore + stratScore + masteryScore;
-
-  const calculateGradeLetter = (score: number): 'A+' | 'A' | 'B' | 'C' | 'D' | 'F' => {
-    if (score >= 95) return 'A+';
-    if (score >= 85) return 'A';
-    if (score >= 75) return 'B';
-    if (score >= 65) return 'C';
-    if (score >= 50) return 'D';
-    return 'F';
-  };
-
-  const computedGrade = calculateGradeLetter(totalScore);
-
-  const handleSaveGrade = () => {
-    saveKPIGrade({
-      monthYear: selectedMonth,
-      overallScore: totalScore,
-      grade: computedGrade,
-      scores: {
-        operationalExcellence: opScore,
-        teamLeadership: teamScore,
-        strategicGrowth: stratScore,
-        personalMastery: masteryScore,
-      },
-      notes: {
-        operationalExcellenceNote: currentGradeObj.notes.operationalExcellenceNote || '',
-        teamLeadershipNote: currentGradeObj.notes.teamLeadershipNote || '',
-        strategicGrowthNote: currentGradeObj.notes.strategicGrowthNote || '',
-        personalMasteryNote: currentGradeObj.notes.personalMasteryNote || '',
-      },
-      reflections: monthlyReflections,
-    });
-  };
+  // Get current automated KPI grade
+  const autoGrade = getAutomatedKPIGradeForMonth(selectedMonth);
 
   // Activity Impact calculations
   const totalActivityHours = activityLogs.reduce((acc, l) => acc + l.hoursSpent, 0);
@@ -136,141 +58,114 @@ export const DashboardCOOPerformance: React.FC<DashboardCOOPerformanceProps> = (
 
   return (
     <div className="space-y-8">
-      {/* 1. Monthly Self-Grading Engine */}
-      <section className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm space-y-6">
+      {/* 1. Automated Monthly KPI Grading Engine */}
+      <section className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
           <div>
             <div className="flex items-center gap-2">
-              <span className="bg-blue-100 text-blue-700 text-xs font-bold px-2.5 py-0.5 rounded-md uppercase tracking-wide">
-                Monthly Self-Grading Engine
+              <span className="bg-emerald-100 text-emerald-800 text-xs font-bold px-2.5 py-0.5 rounded-md uppercase tracking-wide flex items-center gap-1">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                Automated Dynamic KPI Engine
               </span>
               <span className="text-xs text-slate-500 font-medium">Month: {selectedMonth}</span>
             </div>
             <h2 className="text-xl font-bold text-slate-900 mt-1 flex items-center gap-2">
               <Award className="w-5 h-5 text-blue-600" />
-              <span>COO Personal Performance Scorecard</span>
+              <span>COO Executive Grade & Performance Scorecard</span>
             </h2>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Grade is calculated automatically from real-time daily inputs (121 cadence, goal progress, high-impact hours, and wellness consistency).
+            </p>
           </div>
 
-          <div className="flex items-center gap-4">
-            <div className="bg-slate-50 border border-slate-200 px-4 py-2 rounded-xl flex items-center gap-3">
-              <div className="text-right">
-                <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block">Total Score</span>
-                <span className="text-2xl font-black text-blue-600">{totalScore} <span className="text-xs text-slate-500 font-medium">/ 100</span></span>
-              </div>
-              <div className="w-10 h-10 rounded-lg bg-blue-600 text-white font-black text-xl flex items-center justify-center shadow-xs">
-                {computedGrade}
-              </div>
+          <div className="flex items-center gap-4 bg-slate-900 text-white px-5 py-3 rounded-2xl border border-slate-800 shadow-md">
+            <div className="text-right">
+              <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Automated Score</span>
+              <span className="text-2xl font-black text-blue-400">{autoGrade.overallScore} <span className="text-xs text-slate-400 font-medium">/ 100</span></span>
             </div>
-
-            <button
-              onClick={handleSaveGrade}
-              className="bg-blue-600 hover:bg-blue-500 text-white font-bold px-4 py-2.5 rounded-xl text-xs shadow-sm transition-all active:scale-95"
-            >
-              Save Performance Grade
-            </button>
+            <div className="w-12 h-12 rounded-xl bg-blue-600 text-white font-black text-2xl flex items-center justify-center shadow-lg shadow-blue-600/30">
+              {autoGrade.grade}
+            </div>
           </div>
         </div>
 
-        {/* Sliders Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Operational Excellence */}
-          <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
+        {/* 4 Pillars Breakdown Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Pillar 1: Operational Excellence */}
+          <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-900 flex items-center gap-1.5 uppercase text-[11px]">
-                <Zap className="w-3.5 h-3.5 text-blue-600" /> 1. Operational Excellence (Max 25)
+              <span className="text-xs font-bold text-slate-900 uppercase text-[10px]">
+                Operational Excellence
               </span>
-              <span className="text-sm font-black text-blue-600">{opScore} / 25</span>
+              <span className="text-sm font-black text-blue-600">{autoGrade.scores.operationalExcellence} / 25</span>
             </div>
-            <input
-              type="range"
-              min="0"
-              max="25"
-              value={opScore}
-              onChange={(e) => setOpScore(Number(e.target.value))}
-              className="w-full accent-blue-600 bg-slate-200 h-2 rounded-lg cursor-pointer"
-            />
-            <p className="text-[11px] text-slate-500 font-medium">
-              Evaluates HOD cadence execution, project delivery speed, safety compliance, and zero breakdown SLAs.
+            <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+              <div
+                className="bg-blue-600 h-full rounded-full transition-all duration-500"
+                style={{ width: `${(autoGrade.scores.operationalExcellence / 25) * 100}%` }}
+              />
+            </div>
+            <p className="text-[10px] text-slate-500 font-medium">
+              Driven by department goal completion % & SLA execution.
             </p>
           </div>
 
-          {/* Team Leadership */}
-          <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
+          {/* Pillar 2: Team Leadership */}
+          <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-900 flex items-center gap-1.5 uppercase text-[11px]">
-                <TrendingUp className="w-3.5 h-3.5 text-emerald-600" /> 2. Team Leadership & 121 Cadence (Max 25)
+              <span className="text-xs font-bold text-slate-900 uppercase text-[10px]">
+                121 Leadership Cadence
               </span>
-              <span className="text-sm font-black text-emerald-600">{teamScore} / 25</span>
+              <span className="text-sm font-black text-emerald-600">{autoGrade.scores.teamLeadership} / 25</span>
             </div>
-            <input
-              type="range"
-              min="0"
-              max="25"
-              value={teamScore}
-              onChange={(e) => setTeamScore(Number(e.target.value))}
-              className="w-full accent-emerald-600 bg-slate-200 h-2 rounded-lg cursor-pointer"
-            />
-            <p className="text-[11px] text-slate-500 font-medium">
-              Evaluates 100% 121 completion rate, team psychological safety, sentiment ups/downs tracking, and follow-ups.
+            <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+              <div
+                className="bg-emerald-600 h-full rounded-full transition-all duration-500"
+                style={{ width: `${(autoGrade.scores.teamLeadership / 25) * 100}%` }}
+              />
+            </div>
+            <p className="text-[10px] text-slate-500 font-medium">
+              Driven by 121 session execution rate for Next Energy & Academy.
             </p>
           </div>
 
-          {/* Strategic Growth */}
-          <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
+          {/* Pillar 3: Strategic Growth */}
+          <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-900 flex items-center gap-1.5 uppercase text-[11px]">
-                <Sparkles className="w-3.5 h-3.5 text-amber-500" /> 3. Strategic Growth & Projects (Max 25)
+              <span className="text-xs font-bold text-slate-900 uppercase text-[10px]">
+                Strategic Time & Impact
               </span>
-              <span className="text-sm font-black text-amber-600">{stratScore} / 25</span>
+              <span className="text-sm font-black text-amber-600">{autoGrade.scores.strategicGrowth} / 25</span>
             </div>
-            <input
-              type="range"
-              min="0"
-              max="25"
-              value={stratScore}
-              onChange={(e) => setStratScore(Number(e.target.value))}
-              className="w-full accent-amber-500 bg-slate-200 h-2 rounded-lg cursor-pointer"
-            />
-            <p className="text-[11px] text-slate-500 font-medium">
-              Evaluates commercial pipeline expansion, Next Academy talent synergy, and executive partner networking.
+            <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+              <div
+                className="bg-amber-500 h-full rounded-full transition-all duration-500"
+                style={{ width: `${(autoGrade.scores.strategicGrowth / 25) * 100}%` }}
+              />
+            </div>
+            <p className="text-[10px] text-slate-500 font-medium">
+              Driven by High-Impact activity hours vs noise/distractions.
             </p>
           </div>
 
-          {/* Personal Mastery */}
-          <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
+          {/* Pillar 4: Personal Mastery */}
+          <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-900 flex items-center gap-1.5 uppercase text-[11px]">
-                <Brain className="w-3.5 h-3.5 text-purple-600" /> 4. Personal Mastery & Learning (Max 25)
+              <span className="text-xs font-bold text-slate-900 uppercase text-[10px]">
+                Wellness & Mastery
               </span>
-              <span className="text-sm font-black text-purple-600">{masteryScore} / 25</span>
+              <span className="text-sm font-black text-purple-600">{autoGrade.scores.personalMastery} / 25</span>
             </div>
-            <input
-              type="range"
-              min="0"
-              max="25"
-              value={masteryScore}
-              onChange={(e) => setMasteryScore(Number(e.target.value))}
-              className="w-full accent-purple-600 bg-slate-200 h-2 rounded-lg cursor-pointer"
-            />
-            <p className="text-[11px] text-slate-500 font-medium">
-              Evaluates high-impact time allocation, executive reading execution, and personal/Bible study reflections.
+            <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+              <div
+                className="bg-purple-600 h-full rounded-full transition-all duration-500"
+                style={{ width: `${(autoGrade.scores.personalMastery / 25) * 100}%` }}
+              />
+            </div>
+            <p className="text-[10px] text-slate-500 font-medium">
+              Driven by daily exercise, nutrition, and learning logs.
             </p>
           </div>
-        </div>
-
-        {/* Monthly Strategic Reflection Note */}
-        <div className="space-y-2">
-          <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
-            Monthly Executive Reflections & Summary Notes
-          </label>
-          <textarea
-            rows={3}
-            value={monthlyReflections}
-            onChange={(e) => setMonthlyReflections(e.target.value)}
-            placeholder="Record overall insights, operational wins, and focus areas for next month..."
-            className="w-full bg-slate-50 text-xs text-slate-900 p-3 rounded-xl border border-slate-300 focus:outline-none focus:border-blue-600 focus:bg-white"
-          />
         </div>
       </section>
 
@@ -492,7 +387,6 @@ export const DashboardCOOPerformance: React.FC<DashboardCOOPerformanceProps> = (
                   <p className="text-xs text-slate-500 font-medium">by {book.author}</p>
                 </div>
 
-                {/* Progress bar */}
                 <div className="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden">
                   <div
                     className="bg-blue-600 h-full rounded-full transition-all duration-300"
@@ -500,7 +394,6 @@ export const DashboardCOOPerformance: React.FC<DashboardCOOPerformanceProps> = (
                   />
                 </div>
 
-                {/* What I Learned */}
                 <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-1">
                   <span className="text-[10px] font-extrabold text-blue-700 uppercase tracking-wider block">
                     What Did I Learn?
@@ -508,7 +401,6 @@ export const DashboardCOOPerformance: React.FC<DashboardCOOPerformanceProps> = (
                   <p className="text-xs text-slate-700 font-medium">{book.learnings}</p>
                 </div>
 
-                {/* How to Apply */}
                 <div className="bg-emerald-50/60 p-3 rounded-xl border border-emerald-200 space-y-1">
                   <span className="text-[10px] font-extrabold text-emerald-800 uppercase tracking-wider block">
                     How To Apply to Next Energy / Academy
@@ -532,7 +424,7 @@ export const DashboardCOOPerformance: React.FC<DashboardCOOPerformanceProps> = (
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-              <Heart className="w-5 h-5 text-rose-600" />
+              <Brain className="w-5 h-5 text-rose-600" />
               <span>Personal Goals & Bible Learning Reflections</span>
             </h3>
             <p className="text-xs text-slate-500 mt-0.5">

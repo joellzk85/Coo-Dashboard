@@ -2,13 +2,14 @@ import React, { useState } from 'react';
 import { DashboardProvider } from './context/DashboardContext';
 import { Navbar } from './components/Navbar';
 import { DashboardCompanyProgress } from './components/DashboardCompanyProgress';
+import { DashboardRoadmap } from './components/DashboardRoadmap';
 import { Dashboard121Tracker } from './components/Dashboard121Tracker';
+import { DashboardWellness } from './components/DashboardWellness';
 import { DashboardCOOPerformance } from './components/DashboardCOOPerformance';
-import { FirebaseDeploymentSettings } from './components/FirebaseDeploymentSettings';
 import { QuickAddModal } from './components/Modals/QuickAddModal';
 
 export function DashboardApp() {
-  const [activeTab, setActiveTab] = useState<'goals' | '121s' | 'performance' | 'settings'>('goals');
+  const [activeTab, setActiveTab] = useState<'goals' | 'roadmap' | '121s' | 'wellness' | 'performance'>('goals');
   const [modalType, setModalType] = useState<'121' | 'deptGoal' | 'activity' | 'journal' | 'book' | 'personalBible' | null>(null);
 
   const handleOpenQuickAdd = (type: '121' | 'deptGoal' | 'activity' | 'journal') => {
@@ -29,8 +30,16 @@ export function DashboardApp() {
             <DashboardCompanyProgress onOpenAddGoal={() => setModalType('deptGoal')} />
           )}
 
+          {activeTab === 'roadmap' && (
+            <DashboardRoadmap />
+          )}
+
           {activeTab === '121s' && (
             <Dashboard121Tracker onOpenAdd121={() => setModalType('121')} />
+          )}
+
+          {activeTab === 'wellness' && (
+            <DashboardWellness />
           )}
 
           {activeTab === 'performance' && (
@@ -41,8 +50,6 @@ export function DashboardApp() {
               onOpenAddPersonalBible={() => setModalType('personalBible')}
             />
           )}
-
-          {activeTab === 'settings' && <FirebaseDeploymentSettings />}
         </main>
       </div>
 
@@ -53,12 +60,12 @@ export function DashboardApp() {
             <div className="flex items-center space-x-2">
               <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></div>
               <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
-                Live Hybrid System Ready
+                Standalone Web Application • Active Local Storage
               </span>
             </div>
             <div className="h-3.5 w-px bg-slate-700 hidden sm:block"></div>
             <div className="text-[11px] text-slate-300 hidden md:block">
-              <span className="text-slate-400">Executive Focus:</span> Next Energy & Next Academy Operations
+              <span className="text-slate-400">Executive Scope:</span> Next Energy & Next Academy Operations
             </div>
           </div>
           <div className="text-[10px] font-bold uppercase tracking-widest text-slate-400">

@@ -1,23 +1,21 @@
 import React from 'react';
 import { useDashboard } from '../context/DashboardContext';
-import { CompanyId } from '../types/dashboard';
 import {
   TrendingUp,
   Users,
   Award,
-  Settings,
   Zap,
   GraduationCap,
   Plus,
-  Database,
   Calendar,
-  CheckCircle2,
-  RefreshCw
+  Layers,
+  HeartPulse,
+  RotateCcw
 } from 'lucide-react';
 
 interface NavbarProps {
-  activeTab: 'goals' | '121s' | 'performance' | 'settings';
-  setActiveTab: (tab: 'goals' | '121s' | 'performance' | 'settings') => void;
+  activeTab: 'goals' | 'roadmap' | '121s' | 'wellness' | 'performance';
+  setActiveTab: (tab: 'goals' | 'roadmap' | '121s' | 'wellness' | 'performance') => void;
   onOpenQuickAdd: (type: '121' | 'deptGoal' | 'activity' | 'journal') => void;
 }
 
@@ -27,7 +25,6 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, onOpenQ
     setSelectedCompany,
     selectedMonth,
     setSelectedMonth,
-    isFirebaseSynced,
     resetToDemoData
   } = useDashboard();
 
@@ -63,7 +60,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, onOpenQ
             </div>
           </div>
 
-          {/* Controls: Company Filter + Month Selector + Quick Add + Sync Status */}
+          {/* Controls: Company Filter + Month Selector + Quick Add */}
           <div className="flex flex-wrap items-center gap-3">
             
             {/* Company Selector Pills */}
@@ -113,7 +110,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, onOpenQ
               />
             </div>
 
-            {/* Quick Action Dropdown / Button */}
+            {/* Quick Action Dropdown */}
             <div className="relative group">
               <button
                 className="bg-blue-600 hover:bg-blue-500 text-white font-bold px-3.5 py-1.5 rounded-lg text-xs flex items-center gap-1.5 transition-all shadow-md active:scale-95"
@@ -154,18 +151,15 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, onOpenQ
               </div>
             </div>
 
-            {/* Sync Badge */}
+            {/* Reset Demo Data Button */}
             <button
-              onClick={() => setActiveTab('settings')}
-              title="Click to view Firebase & Deployment Status"
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium border ${
-                isFirebaseSynced
-                  ? 'bg-emerald-950/60 border-emerald-800/80 text-emerald-400'
-                  : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-slate-200'
-              }`}
+              onClick={() => {
+                if (window.confirm('Reset local storage state back to original demo seed data?')) resetToDemoData();
+              }}
+              title="Reset data to defaults"
+              className="p-1.5 bg-slate-950 border border-slate-800 text-slate-400 hover:text-slate-200 rounded-lg text-xs transition-colors"
             >
-              <Database className="w-3 h-3" />
-              <span>{isFirebaseSynced ? 'Firestore Live' : 'Local Hybrid'}</span>
+              <RotateCcw className="w-3.5 h-3.5" />
             </button>
 
           </div>
@@ -182,7 +176,19 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, onOpenQ
             }`}
           >
             <TrendingUp className="w-4 h-4" />
-            <span>1. Departmental & Company Progress</span>
+            <span>1. Company & Department Goals</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('roadmap')}
+            className={`px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 transition-all whitespace-nowrap ${
+              activeTab === 'roadmap'
+                ? 'bg-blue-600 text-white shadow-md'
+                : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/60'
+            }`}
+          >
+            <Layers className="w-4 h-4" />
+            <span>2. Executive Roadmap</span>
           </button>
 
           <button
@@ -194,7 +200,19 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, onOpenQ
             }`}
           >
             <Users className="w-4 h-4" />
-            <span>2. 1-on-1 Session Tracker & Cadence</span>
+            <span>3. 121 Session Tracker</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('wellness')}
+            className={`px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 transition-all whitespace-nowrap ${
+              activeTab === 'wellness'
+                ? 'bg-blue-600 text-white shadow-md'
+                : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/60'
+            }`}
+          >
+            <HeartPulse className="w-4 h-4 text-rose-400" />
+            <span>4. Personal Wellness</span>
           </button>
 
           <button
@@ -206,19 +224,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, onOpenQ
             }`}
           >
             <Award className="w-4 h-4" />
-            <span>3. COO Personal Performance & KPI Grading</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('settings')}
-            className={`px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 transition-all whitespace-nowrap ${
-              activeTab === 'settings'
-                ? 'bg-blue-600 text-white shadow-md'
-                : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/60'
-            }`}
-          >
-            <Settings className="w-4 h-4" />
-            <span>4. Firebase & Github Setup</span>
+            <span>5. COO KPI Scorecard</span>
           </button>
         </nav>
       </div>

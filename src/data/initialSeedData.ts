@@ -7,7 +7,8 @@ import {
   ActivityImpactLog,
   COOLearningReflection,
   ReadingLog,
-  PersonalGoalAndBible
+  PersonalGoalAndBible,
+  WellnessLog
 } from '../types/dashboard';
 
 export const INITIAL_DEPARTMENTS: Department[] = [
@@ -736,3 +737,53 @@ export const INITIAL_PERSONAL_AND_BIBLE: PersonalGoalAndBible[] = [
     completed: true,
   },
 ];
+
+export const INITIAL_WELLNESS_LOGS: WellnessLog[] = [
+  {
+    id: 'well_1',
+    date: '2026-08-07',
+    foodIntake: {
+      breakfast: 'Oatmeal with chia seeds, blueberries, protein whey shake',
+      lunch: 'Grilled salmon bowl with quinoa, roasted broccoli, avocado',
+      dinner: 'Steamed chicken breast with sweet potato and green asparagus',
+      snacks: 'Handful of raw almonds, green tea, Greek yogurt',
+      waterIntakeLiters: 3.2,
+      caloriesEstimate: 2350,
+      notes: 'Clean whole-food eating day. Zero refined sugar or processed snacks.',
+    },
+    movement: {
+      activityType: 'Zone 2 Outdoor Running & Strength Training',
+      durationMinutes: 60,
+      intensity: 'Vigorous',
+      stepsCount: 11400,
+      caloriesBurned: 620,
+      notes: '45 mins Zone 2 run @ 5:45/km pace + 15 mins core kettlebell circuit.',
+    },
+    energyRating: 5,
+    createdAt: '2026-08-07T20:00:00Z',
+  },
+  {
+    id: 'well_2',
+    date: '2026-08-06',
+    foodIntake: {
+      breakfast: '3 scrambled eggs with spinach and wholewheat sourdough toast',
+      lunch: 'Chicken breast salad with olive oil dressing & edamame',
+      dinner: 'Pan-seared seabass with roasted zucchini and brown rice',
+      snacks: 'Apple with peanut butter, black coffee',
+      waterIntakeLiters: 2.8,
+      caloriesEstimate: 2100,
+      notes: 'Slightly lower carb intake on rest day.',
+    },
+    movement: {
+      activityType: 'Brisk Walking & Mobility Stretching',
+      durationMinutes: 45,
+      intensity: 'Moderate',
+      stepsCount: 9200,
+      caloriesBurned: 340,
+      notes: 'Post-lunch walk around commercial park + evening foam rolling.',
+    },
+    energyRating: 4,
+    createdAt: '2026-08-06T20:00:00Z',
+  },
+];
+
