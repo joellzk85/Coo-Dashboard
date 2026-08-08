@@ -387,7 +387,11 @@ export const Dashboard121Tracker: React.FC<Dashboard121TrackerProps> = ({ onOpen
                                 </button>
 
                                 <button
-                                  onClick={() => delete121Session(session.id)}
+                                  onClick={() => {
+                                    if (window.confirm('Are you sure you want to delete this 1-on-1 session entry?')) {
+                                      delete121Session(session.id);
+                                    }
+                                  }}
                                   className="text-slate-400 hover:text-rose-600 p-1 transition-colors"
                                   title="Delete session"
                                 >

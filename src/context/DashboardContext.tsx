@@ -362,20 +362,25 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   // --- Company Goals Cloud CRUD ---
   const addCompanyGoal = async (goal: Omit<CompanyGoal, 'id' | 'lastUpdated'>) => {
-    if (!user) return;
-    setSyncStatus('syncing');
     const id = `cg_${Date.now()}`;
     const newGoal: CompanyGoal = {
       ...goal,
       id,
       lastUpdated: new Date().toISOString().split('T')[0],
     };
-    await setDoc(doc(db, 'users', user.uid, 'companyGoals', id), cleanObject(newGoal));
+    setCompanyGoals((prev) => [newGoal, ...prev]);
+    if (!user) return;
+    try {
+      setSyncStatus('syncing');
+      await setDoc(doc(db, 'users', user.uid, 'companyGoals', id), cleanObject(newGoal));
+      setSyncStatus('synced');
+    } catch (err) {
+      console.error('Error adding company goal:', err);
+      setSyncStatus('error');
+    }
   };
 
   const updateCompanyGoal = async (id: string, partial: Partial<CompanyGoal>) => {
-    if (!user) return;
-    setSyncStatus('syncing');
     const existing = companyGoals.find((g) => g.id === id);
     if (!existing) return;
     const updated = {
@@ -383,17 +388,32 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       ...partial,
       lastUpdated: new Date().toISOString().split('T')[0],
     };
-    await setDoc(doc(db, 'users', user.uid, 'companyGoals', id), cleanObject(updated));
+    setCompanyGoals((prev) => prev.map((g) => (g.id === id ? updated : g)));
+    if (!user) return;
+    try {
+      setSyncStatus('syncing');
+      await setDoc(doc(db, 'users', user.uid, 'companyGoals', id), cleanObject(updated));
+      setSyncStatus('synced');
+    } catch (err) {
+      console.error('Error updating company goal:', err);
+      setSyncStatus('error');
+    }
   };
 
   const deleteCompanyGoal = async (id: string) => {
+    setCompanyGoals((prev) => prev.filter((g) => g.id !== id));
     if (!user) return;
-    setSyncStatus('syncing');
-    await deleteDoc(doc(db, 'users', user.uid, 'companyGoals', id));
+    try {
+      setSyncStatus('syncing');
+      await deleteDoc(doc(db, 'users', user.uid, 'companyGoals', id));
+      setSyncStatus('synced');
+    } catch (err) {
+      console.error('Error deleting company goal:', err);
+      setSyncStatus('error');
+    }
   };
 
   const toggleCompanyMilestone = async (companyGoalId: string, milestoneId: string) => {
-    if (!user) return;
     const goal = companyGoals.find((g) => g.id === companyGoalId);
     if (!goal) return;
     const updatedMilestones = goal.milestones.map((m) =>
@@ -404,20 +424,25 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   // --- Department Goals Cloud CRUD ---
   const addDepartmentGoal = async (goal: Omit<DepartmentGoal, 'id' | 'lastUpdated'>) => {
-    if (!user) return;
-    setSyncStatus('syncing');
     const id = `dg_${Date.now()}`;
     const newGoal: DepartmentGoal = {
       ...goal,
       id,
       lastUpdated: new Date().toISOString().split('T')[0],
     };
-    await setDoc(doc(db, 'users', user.uid, 'departmentGoals', id), cleanObject(newGoal));
+    setDepartmentGoals((prev) => [newGoal, ...prev]);
+    if (!user) return;
+    try {
+      setSyncStatus('syncing');
+      await setDoc(doc(db, 'users', user.uid, 'departmentGoals', id), cleanObject(newGoal));
+      setSyncStatus('synced');
+    } catch (err) {
+      console.error('Error adding department goal:', err);
+      setSyncStatus('error');
+    }
   };
 
   const updateDepartmentGoal = async (id: string, partial: Partial<DepartmentGoal>) => {
-    if (!user) return;
-    setSyncStatus('syncing');
     const existing = departmentGoals.find((g) => g.id === id);
     if (!existing) return;
     const updated = {
@@ -425,17 +450,32 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       ...partial,
       lastUpdated: new Date().toISOString().split('T')[0],
     };
-    await setDoc(doc(db, 'users', user.uid, 'departmentGoals', id), cleanObject(updated));
+    setDepartmentGoals((prev) => prev.map((g) => (g.id === id ? updated : g)));
+    if (!user) return;
+    try {
+      setSyncStatus('syncing');
+      await setDoc(doc(db, 'users', user.uid, 'departmentGoals', id), cleanObject(updated));
+      setSyncStatus('synced');
+    } catch (err) {
+      console.error('Error updating department goal:', err);
+      setSyncStatus('error');
+    }
   };
 
   const deleteDepartmentGoal = async (id: string) => {
+    setDepartmentGoals((prev) => prev.filter((g) => g.id !== id));
     if (!user) return;
-    setSyncStatus('syncing');
-    await deleteDoc(doc(db, 'users', user.uid, 'departmentGoals', id));
+    try {
+      setSyncStatus('syncing');
+      await deleteDoc(doc(db, 'users', user.uid, 'departmentGoals', id));
+      setSyncStatus('synced');
+    } catch (err) {
+      console.error('Error deleting department goal:', err);
+      setSyncStatus('error');
+    }
   };
 
   const toggleDepartmentMilestone = async (deptGoalId: string, milestoneId: string) => {
-    if (!user) return;
     const goal = departmentGoals.find((g) => g.id === deptGoalId);
     if (!goal) return;
     const updatedMilestones = goal.milestones.map((m) =>
@@ -446,136 +486,250 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   // --- 121 Sessions Cloud CRUD ---
   const add121Session = async (session: Omit<Session121, 'id' | 'createdAt'>) => {
-    if (!user) return;
-    setSyncStatus('syncing');
     const id = `s121_${Date.now()}`;
     const newSession: Session121 = {
       ...session,
       id,
       createdAt: new Date().toISOString(),
     };
-    await setDoc(doc(db, 'users', user.uid, 'sessions121', id), cleanObject(newSession));
+    setSessions121((prev) => [newSession, ...prev]);
+    if (!user) return;
+    try {
+      setSyncStatus('syncing');
+      await setDoc(doc(db, 'users', user.uid, 'sessions121', id), cleanObject(newSession));
+      setSyncStatus('synced');
+    } catch (err) {
+      console.error('Error adding 121 session:', err);
+      setSyncStatus('error');
+    }
   };
 
   const update121Session = async (id: string, partial: Partial<Session121>) => {
-    if (!user) return;
-    setSyncStatus('syncing');
     const existing = sessions121.find((s) => s.id === id);
     if (!existing) return;
     const updated = { ...existing, ...partial };
-    await setDoc(doc(db, 'users', user.uid, 'sessions121', id), cleanObject(updated));
+    setSessions121((prev) => prev.map((s) => (s.id === id ? updated : s)));
+    if (!user) return;
+    try {
+      setSyncStatus('syncing');
+      await setDoc(doc(db, 'users', user.uid, 'sessions121', id), cleanObject(updated));
+      setSyncStatus('synced');
+    } catch (err) {
+      console.error('Error updating 121 session:', err);
+      setSyncStatus('error');
+    }
   };
 
   const delete121Session = async (id: string) => {
+    setSessions121((prev) => prev.filter((s) => s.id !== id));
     if (!user) return;
-    setSyncStatus('syncing');
-    await deleteDoc(doc(db, 'users', user.uid, 'sessions121', id));
+    try {
+      setSyncStatus('syncing');
+      await deleteDoc(doc(db, 'users', user.uid, 'sessions121', id));
+      setSyncStatus('synced');
+    } catch (err) {
+      console.error('Error deleting 121 session:', err);
+      setSyncStatus('error');
+    }
   };
 
   // --- Personal Wellness Logs Cloud CRUD ---
   const addWellnessLog = async (log: Omit<WellnessLog, 'id' | 'createdAt'>) => {
-    if (!user) return;
-    setSyncStatus('syncing');
     const id = `well_${Date.now()}`;
     const newLog: WellnessLog = {
       ...log,
       id,
       createdAt: new Date().toISOString(),
     };
-    await setDoc(doc(db, 'users', user.uid, 'wellnessLogs', id), cleanObject(newLog));
+    setWellnessLogs((prev) => [newLog, ...prev]);
+    if (!user) return;
+    try {
+      setSyncStatus('syncing');
+      await setDoc(doc(db, 'users', user.uid, 'wellnessLogs', id), cleanObject(newLog));
+      setSyncStatus('synced');
+    } catch (err) {
+      console.error('Error adding wellness log:', err);
+      setSyncStatus('error');
+    }
   };
 
   const updateWellnessLog = async (id: string, partial: Partial<WellnessLog>) => {
-    if (!user) return;
-    setSyncStatus('syncing');
     const existing = wellnessLogs.find((w) => w.id === id);
     if (!existing) return;
     const updated = { ...existing, ...partial };
-    await setDoc(doc(db, 'users', user.uid, 'wellnessLogs', id), cleanObject(updated));
+    setWellnessLogs((prev) => prev.map((w) => (w.id === id ? updated : w)));
+    if (!user) return;
+    try {
+      setSyncStatus('syncing');
+      await setDoc(doc(db, 'users', user.uid, 'wellnessLogs', id), cleanObject(updated));
+      setSyncStatus('synced');
+    } catch (err) {
+      console.error('Error updating wellness log:', err);
+      setSyncStatus('error');
+    }
   };
 
   const deleteWellnessLog = async (id: string) => {
+    setWellnessLogs((prev) => prev.filter((w) => w.id !== id));
     if (!user) return;
-    setSyncStatus('syncing');
-    await deleteDoc(doc(db, 'users', user.uid, 'wellnessLogs', id));
+    try {
+      setSyncStatus('syncing');
+      await deleteDoc(doc(db, 'users', user.uid, 'wellnessLogs', id));
+      setSyncStatus('synced');
+    } catch (err) {
+      console.error('Error deleting wellness log:', err);
+      setSyncStatus('error');
+    }
   };
 
   // --- Activity Logs Cloud CRUD ---
   const addActivityLog = async (log: Omit<ActivityImpactLog, 'id'>) => {
-    if (!user) return;
-    setSyncStatus('syncing');
     const id = `act_${Date.now()}`;
     const newLog: ActivityImpactLog = { ...log, id };
-    await setDoc(doc(db, 'users', user.uid, 'activityLogs', id), cleanObject(newLog));
+    setActivityLogs((prev) => [newLog, ...prev]);
+    if (!user) return;
+    try {
+      setSyncStatus('syncing');
+      await setDoc(doc(db, 'users', user.uid, 'activityLogs', id), cleanObject(newLog));
+      setSyncStatus('synced');
+    } catch (err) {
+      console.error('Error adding activity log:', err);
+      setSyncStatus('error');
+    }
   };
 
   const deleteActivityLog = async (id: string) => {
+    setActivityLogs((prev) => prev.filter((a) => a.id !== id));
     if (!user) return;
-    setSyncStatus('syncing');
-    await deleteDoc(doc(db, 'users', user.uid, 'activityLogs', id));
+    try {
+      setSyncStatus('syncing');
+      await deleteDoc(doc(db, 'users', user.uid, 'activityLogs', id));
+      setSyncStatus('synced');
+    } catch (err) {
+      console.error('Error deleting activity log:', err);
+      setSyncStatus('error');
+    }
   };
 
   // --- Reflections Cloud CRUD ---
   const addReflection = async (reflection: Omit<COOLearningReflection, 'id'>) => {
-    if (!user) return;
-    setSyncStatus('syncing');
     const id = `ref_${Date.now()}`;
     const newRef: COOLearningReflection = { ...reflection, id };
-    await setDoc(doc(db, 'users', user.uid, 'reflections', id), cleanObject(newRef));
+    setReflections((prev) => [newRef, ...prev]);
+    if (!user) return;
+    try {
+      setSyncStatus('syncing');
+      await setDoc(doc(db, 'users', user.uid, 'reflections', id), cleanObject(newRef));
+      setSyncStatus('synced');
+    } catch (err) {
+      console.error('Error adding reflection:', err);
+      setSyncStatus('error');
+    }
   };
 
   const deleteReflection = async (id: string) => {
+    setReflections((prev) => prev.filter((r) => r.id !== id));
     if (!user) return;
-    setSyncStatus('syncing');
-    await deleteDoc(doc(db, 'users', user.uid, 'reflections', id));
+    try {
+      setSyncStatus('syncing');
+      await deleteDoc(doc(db, 'users', user.uid, 'reflections', id));
+      setSyncStatus('synced');
+    } catch (err) {
+      console.error('Error deleting reflection:', err);
+      setSyncStatus('error');
+    }
   };
 
   // --- Reading Logs Cloud CRUD ---
   const addReadingLog = async (log: Omit<ReadingLog, 'id'>) => {
-    if (!user) return;
-    setSyncStatus('syncing');
     const id = `book_${Date.now()}`;
     const newLog: ReadingLog = { ...log, id };
-    await setDoc(doc(db, 'users', user.uid, 'readingLogs', id), cleanObject(newLog));
+    setReadingLogs((prev) => [newLog, ...prev]);
+    if (!user) return;
+    try {
+      setSyncStatus('syncing');
+      await setDoc(doc(db, 'users', user.uid, 'readingLogs', id), cleanObject(newLog));
+      setSyncStatus('synced');
+    } catch (err) {
+      console.error('Error adding reading log:', err);
+      setSyncStatus('error');
+    }
   };
 
   const updateReadingLog = async (id: string, partial: Partial<ReadingLog>) => {
-    if (!user) return;
-    setSyncStatus('syncing');
     const existing = readingLogs.find((r) => r.id === id);
     if (!existing) return;
     const updated = { ...existing, ...partial };
-    await setDoc(doc(db, 'users', user.uid, 'readingLogs', id), cleanObject(updated));
+    setReadingLogs((prev) => prev.map((r) => (r.id === id ? updated : r)));
+    if (!user) return;
+    try {
+      setSyncStatus('syncing');
+      await setDoc(doc(db, 'users', user.uid, 'readingLogs', id), cleanObject(updated));
+      setSyncStatus('synced');
+    } catch (err) {
+      console.error('Error updating reading log:', err);
+      setSyncStatus('error');
+    }
   };
 
   const deleteReadingLog = async (id: string) => {
+    setReadingLogs((prev) => prev.filter((r) => r.id !== id));
     if (!user) return;
-    setSyncStatus('syncing');
-    await deleteDoc(doc(db, 'users', user.uid, 'readingLogs', id));
+    try {
+      setSyncStatus('syncing');
+      await deleteDoc(doc(db, 'users', user.uid, 'readingLogs', id));
+      setSyncStatus('synced');
+    } catch (err) {
+      console.error('Error deleting reading log:', err);
+      setSyncStatus('error');
+    }
   };
 
   // --- Personal Goal & Bible Cloud CRUD ---
   const addPersonalGoalOrBible = async (item: Omit<PersonalGoalAndBible, 'id'>) => {
-    if (!user) return;
-    setSyncStatus('syncing');
     const id = `pb_${Date.now()}`;
     const newItem: PersonalGoalAndBible = { ...item, id };
-    await setDoc(doc(db, 'users', user.uid, 'personalGoalsAndBible', id), cleanObject(newItem));
+    setPersonalGoalsAndBible((prev) => [newItem, ...prev]);
+    if (!user) return;
+    try {
+      setSyncStatus('syncing');
+      await setDoc(doc(db, 'users', user.uid, 'personalGoalsAndBible', id), cleanObject(newItem));
+      setSyncStatus('synced');
+    } catch (err) {
+      console.error('Error adding personal goal:', err);
+      setSyncStatus('error');
+    }
   };
 
   const togglePersonalGoalOrBible = async (id: string) => {
-    if (!user) return;
     const existing = personalGoalsAndBible.find((p) => p.id === id);
     if (!existing) return;
-    await updateDoc(doc(db, 'users', user.uid, 'personalGoalsAndBible', id), {
-      completed: !existing.completed,
-    });
+    const updated = { ...existing, completed: !existing.completed };
+    setPersonalGoalsAndBible((prev) => prev.map((p) => (p.id === id ? updated : p)));
+    if (!user) return;
+    try {
+      setSyncStatus('syncing');
+      await updateDoc(doc(db, 'users', user.uid, 'personalGoalsAndBible', id), {
+        completed: updated.completed,
+      });
+      setSyncStatus('synced');
+    } catch (err) {
+      console.error('Error toggling personal goal:', err);
+      setSyncStatus('error');
+    }
   };
 
   const deletePersonalGoalOrBible = async (id: string) => {
+    setPersonalGoalsAndBible((prev) => prev.filter((p) => p.id !== id));
     if (!user) return;
-    setSyncStatus('syncing');
-    await deleteDoc(doc(db, 'users', user.uid, 'personalGoalsAndBible', id));
+    try {
+      setSyncStatus('syncing');
+      await deleteDoc(doc(db, 'users', user.uid, 'personalGoalsAndBible', id));
+      setSyncStatus('synced');
+    } catch (err) {
+      console.error('Error deleting personal goal:', err);
+      setSyncStatus('error');
+    }
   };
 
   // Helper function for goal impact weights

@@ -318,7 +318,11 @@ export const DashboardCOOPerformance: React.FC<DashboardCOOPerformanceProps> = (
                     <Clock className="w-3.5 h-3.5 text-blue-600" /> {log.hoursSpent} hrs
                   </span>
                   <button
-                    onClick={() => deleteActivityLog(log.id)}
+                    onClick={() => {
+                      if (window.confirm('Are you sure you want to delete this activity log entry?')) {
+                        deleteActivityLog(log.id);
+                      }
+                    }}
                     className="text-slate-400 hover:text-rose-600 p-1"
                     title="Delete activity log"
                   >
@@ -386,7 +390,11 @@ export const DashboardCOOPerformance: React.FC<DashboardCOOPerformanceProps> = (
 
               <div className="text-right pt-2">
                 <button
-                  onClick={() => deleteReflection(ref.id)}
+                  onClick={() => {
+                    if (window.confirm('Are you sure you want to delete this strategic reflection entry?')) {
+                      deleteReflection(ref.id);
+                    }
+                  }}
                   className="text-xs text-slate-400 hover:text-rose-600 flex items-center gap-1 ml-auto font-medium"
                 >
                   <Trash2 className="w-3.5 h-3.5" /> Delete Entry
@@ -440,8 +448,13 @@ export const DashboardCOOPerformance: React.FC<DashboardCOOPerformanceProps> = (
                   </span>
 
                   <button
-                    onClick={() => deleteReadingLog(book.id)}
+                    onClick={() => {
+                      if (window.confirm('Are you sure you want to delete this book log?')) {
+                        deleteReadingLog(book.id);
+                      }
+                    }}
                     className="text-slate-400 hover:text-rose-600 p-1"
+                    title="Delete book log"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
@@ -560,8 +573,13 @@ export const DashboardCOOPerformance: React.FC<DashboardCOOPerformanceProps> = (
                 <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1 font-medium">
                   <span>Target Date: {item.targetDate}</span>
                   <button
-                    onClick={() => deletePersonalGoalOrBible(item.id)}
+                    onClick={() => {
+                      if (window.confirm('Are you sure you want to delete this personal/Bible goal entry?')) {
+                        deletePersonalGoalOrBible(item.id);
+                      }
+                    }}
                     className="text-slate-400 hover:text-rose-600 p-1"
+                    title="Delete entry"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
