@@ -1,0 +1,147 @@
+{
+  "entities": {
+    "companyGoal": {
+      "title": "Company Goal",
+      "description": "High level strategic company goal",
+      "properties": {
+        "userId": { "type": "string" },
+        "companyId": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "targetMetric": { "type": "string" },
+        "currentValue": { "type": "number" },
+        "targetValue": { "type": "number" },
+        "unit": { "type": "string" },
+        "targetDate": { "type": "string" },
+        "overallRating": { "type": "string" },
+        "impactLevel": { "type": "string" },
+        "academyRevenueCurrent": { "type": "number" },
+        "academyRevenueTarget": { "type": "number" },
+        "academyTrainingDaysCurrent": { "type": "number" },
+        "academyTrainingDaysTarget": { "type": "number" },
+        "milestones": { "type": "array" },
+        "lastUpdated": { "type": "string" }
+      },
+      "required": ["userId", "companyId", "title"]
+    },
+    "departmentGoal": {
+      "title": "Department Goal",
+      "description": "Department and HOD goal",
+      "properties": {
+        "userId": { "type": "string" },
+        "departmentId": { "type": "string" },
+        "departmentName": { "type": "string" },
+        "companyId": { "type": "string" },
+        "hodName": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "targetMetric": { "type": "string" },
+        "progressPercent": { "type": "number" },
+        "status": { "type": "string" },
+        "targetDate": { "type": "string" },
+        "impactLevel": { "type": "string" },
+        "academyRevenueCurrent": { "type": "number" },
+        "academyRevenueTarget": { "type": "number" },
+        "academyTrainingDaysCurrent": { "type": "number" },
+        "academyTrainingDaysTarget": { "type": "number" },
+        "milestones": { "type": "array" },
+        "lastUpdated": { "type": "string" }
+      },
+      "required": ["userId", "departmentId", "title"]
+    },
+    "session121": {
+      "title": "121 Session",
+      "description": "121 alignment session log",
+      "properties": {
+        "userId": { "type": "string" },
+        "personName": { "type": "string" },
+        "role": { "type": "string" },
+        "departmentId": { "type": "string" },
+        "companyId": { "type": "string" },
+        "cadence": { "type": "string" },
+        "date": { "type": "string" },
+        "monthYear": { "type": "string" },
+        "status": { "type": "string" },
+        "notes": { "type": "string" },
+        "sentimentUps": { "type": "array" },
+        "sentimentDowns": { "type": "array" },
+        "actionItems": { "type": "array" },
+        "energyRating": { "type": "number" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["userId", "personName", "monthYear"]
+    },
+    "activityLog": {
+      "title": "Activity Impact Log",
+      "description": "COO activity impact tracking entry",
+      "properties": {
+        "userId": { "type": "string" },
+        "date": { "type": "string" },
+        "title": { "type": "string" },
+        "category": { "type": "string" },
+        "impactTag": { "type": "string" },
+        "hoursSpent": { "type": "number" },
+        "outcome": { "type": "string" },
+        "reflections": { "type": "string" }
+      },
+      "required": ["userId", "date", "title"]
+    },
+    "learningReflection": {
+      "title": "COO Learning Reflection",
+      "description": "Learning and strategic reflection",
+      "properties": {
+        "userId": { "type": "string" },
+        "date": { "type": "string" },
+        "title": { "type": "string" },
+        "category": { "type": "string" },
+        "content": { "type": "string" },
+        "actionItems": { "type": "array" }
+      },
+      "required": ["userId", "date", "title"]
+    },
+    "readingLog": {
+      "title": "Reading Log",
+      "description": "Executive reading log",
+      "properties": {
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "author": { "type": "string" },
+        "status": { "type": "string" },
+        "progressPercent": { "type": "number" },
+        "learnings": { "type": "string" },
+        "execution": { "type": "string" },
+        "dateCompleted": { "type": "string" }
+      },
+      "required": ["userId", "title"]
+    },
+    "personalGoalAndBible": {
+      "title": "Personal Goal & Bible Log",
+      "description": "Personal development and scripture plan entry",
+      "properties": {
+        "userId": { "type": "string" },
+        "category": { "type": "string" },
+        "title": { "type": "string" },
+        "referenceOrFocus": { "type": "string" },
+        "reflections": { "type": "string" },
+        "actionSteps": { "type": "string" },
+        "targetDate": { "type": "string" },
+        "completed": { "type": "boolean" },
+        "impactLevel": { "type": "string" }
+      },
+      "required": ["userId", "category", "title"]
+    },
+    "wellnessLog": {
+      "title": "Wellness Log",
+      "description": "Daily food, movement, and energy log",
+      "properties": {
+        "userId": { "type": "string" },
+        "date": { "type": "string" },
+        "foodIntake": { "type": "object" },
+        "movement": { "type": "object" },
+        "energyRating": { "type": "number" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["userId", "date"]
+    }
+  }
+}

@@ -60,7 +60,7 @@ export function DashboardApp() {
             <div className="flex items-center space-x-2">
               <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></div>
               <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
-                Standalone Web Application • Active Local Storage
+                Cloud Engine • Active Firebase Firestore Realtime Sync
               </span>
             </div>
             <div className="h-3.5 w-px bg-slate-700 hidden sm:block"></div>
