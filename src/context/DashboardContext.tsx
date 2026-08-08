@@ -176,15 +176,15 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('synced');
 
   const [departments] = useState<Department[]>(INITIAL_DEPARTMENTS);
-  const [companyGoals, setCompanyGoals] = useState<CompanyGoal[]>([]);
-  const [departmentGoals, setDepartmentGoals] = useState<DepartmentGoal[]>([]);
-  const [sessions121, setSessions121] = useState<Session121[]>([]);
+  const [companyGoals, setCompanyGoals] = useState<CompanyGoal[]>(INITIAL_COMPANY_GOALS);
+  const [departmentGoals, setDepartmentGoals] = useState<DepartmentGoal[]>(INITIAL_DEPARTMENT_GOALS);
+  const [sessions121, setSessions121] = useState<Session121[]>(INITIAL_121_SESSIONS);
   const [kpiGrades] = useState<MonthlyKPIGrade[]>(INITIAL_KPI_GRADES);
-  const [activityLogs, setActivityLogs] = useState<ActivityImpactLog[]>([]);
-  const [reflections, setReflections] = useState<COOLearningReflection[]>([]);
-  const [readingLogs, setReadingLogs] = useState<ReadingLog[]>([]);
-  const [personalGoalsAndBible, setPersonalGoalsAndBible] = useState<PersonalGoalAndBible[]>([]);
-  const [wellnessLogs, setWellnessLogs] = useState<WellnessLog[]>([]);
+  const [activityLogs, setActivityLogs] = useState<ActivityImpactLog[]>(INITIAL_ACTIVITY_LOGS);
+  const [reflections, setReflections] = useState<COOLearningReflection[]>(INITIAL_REFLECTIONS);
+  const [readingLogs, setReadingLogs] = useState<ReadingLog[]>(INITIAL_READING_LOGS);
+  const [personalGoalsAndBible, setPersonalGoalsAndBible] = useState<PersonalGoalAndBible[]>(INITIAL_PERSONAL_AND_BIBLE);
+  const [wellnessLogs, setWellnessLogs] = useState<WellnessLog[]>(INITIAL_WELLNESS_LOGS);
 
   const toggleSelectedMonth = (month: string) => {
     setSelectedMonths(prev => {
@@ -242,7 +242,9 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         col,
         async (snapshot) => {
           if (snapshot.empty) {
-            // Seed initial data to cloud for new account
+            // Seed initial data to cloud for new account and set local state immediately
+            setState(initialData);
+            setSyncStatus('synced');
             try {
               const batch = writeBatch(db);
               initialData.forEach((item) => {
@@ -261,6 +263,7 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         },
         (error) => {
           console.error(`Firestore snapshot error for ${colName}:`, error);
+          setState((prev) => (prev.length === 0 ? initialData : prev));
           setSyncStatus('error');
         }
       );

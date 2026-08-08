@@ -34,6 +34,7 @@ export const DashboardCompanyProgress: React.FC<DashboardCompanyProgressProps> =
     toggleDepartmentMilestone,
     deleteCompanyGoal,
     deleteDepartmentGoal,
+    resetToDemoData,
   } = useDashboard();
 
   const [editingGoal, setEditingGoal] = useState<{
@@ -101,8 +102,31 @@ export const DashboardCompanyProgress: React.FC<DashboardCompanyProgressProps> =
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {filteredCompanyGoals.map((cg) => {
+        {filteredCompanyGoals.length === 0 ? (
+          <div className="bg-white border border-slate-200 rounded-2xl p-8 text-center space-y-3 shadow-xs">
+            <Building2 className="w-10 h-10 text-slate-300 mx-auto" />
+            <h3 className="text-sm font-bold text-slate-800">No Company Big Goals Found</h3>
+            <p className="text-xs text-slate-500 max-w-md mx-auto">
+              No macro strategic goals are currently listed for this company filter. You can add a new big goal or restore default demo data.
+            </p>
+            <div className="flex items-center justify-center gap-3 pt-2">
+              <button
+                onClick={onOpenAddGoal}
+                className="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold hover:bg-blue-700 transition-colors flex items-center gap-1.5 cursor-pointer shadow-sm"
+              >
+                <Plus className="w-4 h-4" /> Add Big Goal
+              </button>
+              <button
+                onClick={resetToDemoData}
+                className="px-4 py-2 bg-slate-100 text-slate-700 rounded-xl text-xs font-bold hover:bg-slate-200 transition-colors cursor-pointer"
+              >
+                Restore Demo Goals
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {filteredCompanyGoals.map((cg) => {
             const isEnergy = cg.companyId === 'next_energy';
             const progressPercent = Math.min(
               100,
@@ -297,6 +321,7 @@ export const DashboardCompanyProgress: React.FC<DashboardCompanyProgressProps> =
             );
           })}
         </div>
+        )}
       </section>
 
       {/* 2. HOD & Department Leadership Directory */}
@@ -377,8 +402,31 @@ export const DashboardCompanyProgress: React.FC<DashboardCompanyProgressProps> =
           </button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredDeptGoals.map((dg) => {
+        {filteredDeptGoals.length === 0 ? (
+          <div className="bg-white border border-slate-200 rounded-2xl p-8 text-center space-y-3 shadow-xs">
+            <TrendingUp className="w-10 h-10 text-slate-300 mx-auto" />
+            <h3 className="text-sm font-bold text-slate-800">No Department Goals Found</h3>
+            <p className="text-xs text-slate-500 max-w-md mx-auto">
+              No operational department goals found for the selected filter. You can add a new department goal or restore default demo data.
+            </p>
+            <div className="flex items-center justify-center gap-3 pt-2">
+              <button
+                onClick={onOpenAddGoal}
+                className="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold hover:bg-blue-700 transition-colors flex items-center gap-1.5 cursor-pointer shadow-sm"
+              >
+                <Plus className="w-4 h-4" /> Add Department Goal
+              </button>
+              <button
+                onClick={resetToDemoData}
+                className="px-4 py-2 bg-slate-100 text-slate-700 rounded-xl text-xs font-bold hover:bg-slate-200 transition-colors cursor-pointer"
+              >
+                Restore Demo Goals
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredDeptGoals.map((dg) => {
             const isEnergy = dg.companyId === 'next_energy';
 
             return (
@@ -561,6 +609,7 @@ export const DashboardCompanyProgress: React.FC<DashboardCompanyProgressProps> =
             );
           })}
         </div>
+        )}
       </section>
 
       {/* Edit Modal */}
