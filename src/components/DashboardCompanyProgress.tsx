@@ -174,32 +174,90 @@ export const DashboardCompanyProgress: React.FC<DashboardCompanyProgressProps> =
                 <p className="text-xs text-slate-600 mt-1.5 leading-relaxed">{cg.description}</p>
 
                 {/* Progress Metric & Bar */}
-                <div className="mt-5 bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-slate-500 font-semibold uppercase text-[10px] tracking-wider">{cg.targetMetric}</span>
-                    <div className="flex items-baseline gap-1 font-extrabold text-slate-900">
-                      <span className="text-blue-600 text-base">{cg.currentValue}</span>
-                      <span>/ {cg.targetValue} {cg.unit}</span>
-                      <span className="text-xs text-blue-600 font-bold ml-1">({progressPercent}% COMPLETE)</span>
+                {cg.companyId === 'next_academy' ? (
+                  <div className="mt-5 bg-amber-50/70 border border-amber-200 p-4 rounded-xl space-y-3">
+                    <div className="flex items-center justify-between text-xs border-b border-amber-200/80 pb-2">
+                      <span className="font-bold text-amber-900 text-[11px] uppercase tracking-wider flex items-center gap-1.5">
+                        <GraduationCap className="w-4 h-4 text-amber-600" />
+                        Next Academy Specific Metrics
+                      </span>
+                    </div>
+
+                    {/* Revenue Target Metric */}
+                    <div className="space-y-1">
+                      <div className="flex justify-between text-xs">
+                        <span className="text-slate-600 font-semibold">Revenue Target (RM):</span>
+                        <span className="font-extrabold text-slate-900">
+                          RM {(cg.academyRevenueCurrent ?? 0).toLocaleString()} / RM {(cg.academyRevenueTarget ?? 1500000).toLocaleString()}
+                          <span className="text-amber-700 ml-1 font-bold">
+                            ({Math.min(100, Math.round(((cg.academyRevenueCurrent ?? 0) / (cg.academyRevenueTarget ?? 1500000)) * 100))}% COMPLETE)
+                          </span>
+                        </span>
+                      </div>
+                      <div className="w-full bg-amber-200/70 h-2 rounded-full overflow-hidden">
+                        <div
+                          className="bg-amber-600 h-full rounded-full transition-all duration-500"
+                          style={{
+                            width: `${Math.min(100, Math.round(((cg.academyRevenueCurrent ?? 0) / (cg.academyRevenueTarget ?? 1500000)) * 100))}%`
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Training Volume Metric */}
+                    <div className="space-y-1">
+                      <div className="flex justify-between text-xs">
+                        <span className="text-slate-600 font-semibold">Training Volume:</span>
+                        <span className="font-extrabold text-slate-900">
+                          {cg.academyTrainingDaysCurrent ?? 0} / {cg.academyTrainingDaysTarget ?? 120} Days Conducted
+                          <span className="text-emerald-700 ml-1 font-bold">
+                            ({Math.min(100, Math.round(((cg.academyTrainingDaysCurrent ?? 0) / (cg.academyTrainingDaysTarget ?? 120)) * 100))}% COMPLETE)
+                          </span>
+                        </span>
+                      </div>
+                      <div className="w-full bg-emerald-200/70 h-2 rounded-full overflow-hidden">
+                        <div
+                          className="bg-emerald-600 h-full rounded-full transition-all duration-500"
+                          style={{
+                            width: `${Math.min(100, Math.round(((cg.academyTrainingDaysCurrent ?? 0) / (cg.academyTrainingDaysTarget ?? 120)) * 100))}%`
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between text-[11px] text-slate-500 pt-2 border-t border-amber-200/60">
+                      <span className="flex items-center gap-1 font-medium">
+                        <Calendar className="w-3 h-3 text-slate-400" /> Target Date: {cg.targetDate}
+                      </span>
+                      <span className="font-medium">Last Updated: {cg.lastUpdated}</span>
                     </div>
                   </div>
+                ) : (
+                  <div className="mt-5 bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-slate-500 font-semibold uppercase text-[10px] tracking-wider">{cg.targetMetric}</span>
+                      <div className="flex items-baseline gap-1 font-extrabold text-slate-900">
+                        <span className="text-blue-600 text-base">{cg.currentValue}</span>
+                        <span>/ {cg.targetValue} {cg.unit}</span>
+                        <span className="text-xs text-blue-600 font-bold ml-1">({progressPercent}% COMPLETE)</span>
+                      </div>
+                    </div>
 
-                  <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
-                    <div
-                      className={`h-full rounded-full transition-all duration-500 ${
-                        isEnergy ? 'bg-blue-600' : 'bg-emerald-500'
-                      }`}
-                      style={{ width: `${progressPercent}%` }}
-                    />
-                  </div>
+                    <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+                      <div
+                        className="h-full rounded-full transition-all duration-500 bg-blue-600"
+                        style={{ width: `${progressPercent}%` }}
+                      />
+                    </div>
 
-                  <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1 border-t border-slate-200/60">
-                    <span className="flex items-center gap-1 font-medium">
-                      <Calendar className="w-3 h-3 text-slate-400" /> Target Date: {cg.targetDate}
-                    </span>
-                    <span className="font-medium">Last Updated: {cg.lastUpdated}</span>
+                    <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1 border-t border-slate-200/60">
+                      <span className="flex items-center gap-1 font-medium">
+                        <Calendar className="w-3 h-3 text-slate-400" /> Target Date: {cg.targetDate}
+                      </span>
+                      <span className="font-medium">Last Updated: {cg.lastUpdated}</span>
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {/* Key Milestones checklist */}
                 <div className="mt-5 space-y-2">
@@ -381,74 +439,79 @@ export const DashboardCompanyProgress: React.FC<DashboardCompanyProgressProps> =
                   </h3>
                   <p className="text-xs text-slate-600 leading-relaxed line-clamp-2">{dg.description}</p>
 
-                  {/* Target metric box */}
-                  <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-2">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="text-slate-500 font-medium">{dg.targetMetric}</span>
-                      <span className="font-extrabold text-slate-900">{dg.progressPercent}%</span>
-                    </div>
-
-                    <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
-                      <div
-                        className={`h-full rounded-full transition-all duration-300 ${
-                          dg.status === 'Completed'
-                            ? 'bg-emerald-500'
-                            : dg.status === 'At Risk'
-                            ? 'bg-amber-500'
-                            : dg.status === 'Behind'
-                            ? 'bg-rose-500'
-                            : 'bg-blue-600'
-                        }`}
-                        style={{ width: `${dg.progressPercent}%` }}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Next Academy Specific Metric Breakdown if present */}
-                  {(dg.academyRevenueTarget || dg.academyTrainingDaysTarget) && (
-                    <div className="bg-amber-50/60 border border-amber-200 p-3 rounded-xl space-y-2 text-xs">
-                      <div className="font-bold text-amber-800 text-[11px] flex items-center gap-1">
+                  {/* Next Academy Specific Metric Breakdown or Standard Target Metric Box */}
+                  {dg.companyId === 'next_academy' ? (
+                    <div className="bg-amber-50/70 border border-amber-200 p-3 rounded-xl space-y-2.5 text-xs">
+                      <div className="font-bold text-amber-900 text-[11px] flex items-center gap-1.5 uppercase tracking-wider border-b border-amber-200/80 pb-1.5">
                         <GraduationCap className="w-3.5 h-3.5 text-amber-600" />
-                        <span>Next Academy Volume & Revenue Metrics</span>
+                        <span>Next Academy Performance Metrics</span>
                       </div>
                       
-                      {dg.academyRevenueTarget && (
+                      {dg.academyRevenueTarget ? (
                         <div className="space-y-1">
                           <div className="flex justify-between text-[11px]">
-                            <span className="text-slate-600">Revenue Target (RM):</span>
+                            <span className="text-slate-600 font-semibold">Revenue Target (RM):</span>
                             <span className="font-bold text-slate-900">
                               RM {(dg.academyRevenueCurrent ?? 0).toLocaleString()} / RM {dg.academyRevenueTarget.toLocaleString()}
+                              <span className="text-amber-700 ml-1 font-bold">
+                                ({Math.min(100, Math.round(((dg.academyRevenueCurrent ?? 0) / dg.academyRevenueTarget) * 100))}% COMPLETE)
+                              </span>
                             </span>
                           </div>
                           <div className="w-full bg-amber-200/70 h-1.5 rounded-full overflow-hidden">
                             <div
-                              className="bg-amber-600 h-full rounded-full"
+                              className="bg-amber-600 h-full rounded-full transition-all duration-300"
                               style={{
                                 width: `${Math.min(100, Math.round(((dg.academyRevenueCurrent ?? 0) / dg.academyRevenueTarget) * 100))}%`
                               }}
                             />
                           </div>
                         </div>
-                      )}
+                      ) : null}
 
-                      {dg.academyTrainingDaysTarget && (
+                      {dg.academyTrainingDaysTarget ? (
                         <div className="space-y-1">
                           <div className="flex justify-between text-[11px]">
-                            <span className="text-slate-600">Training Volume:</span>
+                            <span className="text-slate-600 font-semibold">Training Volume:</span>
                             <span className="font-bold text-slate-900">
                               {dg.academyTrainingDaysCurrent ?? 0} / {dg.academyTrainingDaysTarget} Days Conducted
+                              <span className="text-emerald-700 ml-1 font-bold">
+                                ({Math.min(100, Math.round(((dg.academyTrainingDaysCurrent ?? 0) / dg.academyTrainingDaysTarget) * 100))}% COMPLETE)
+                              </span>
                             </span>
                           </div>
                           <div className="w-full bg-emerald-200/70 h-1.5 rounded-full overflow-hidden">
                             <div
-                              className="bg-emerald-600 h-full rounded-full"
+                              className="bg-emerald-600 h-full rounded-full transition-all duration-300"
                               style={{
                                 width: `${Math.min(100, Math.round(((dg.academyTrainingDaysCurrent ?? 0) / dg.academyTrainingDaysTarget) * 100))}%`
                               }}
                             />
                           </div>
                         </div>
-                      )}
+                      ) : null}
+                    </div>
+                  ) : (
+                    <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-2">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-slate-500 font-medium">{dg.targetMetric}</span>
+                        <span className="font-extrabold text-slate-900">{dg.progressPercent}%</span>
+                      </div>
+
+                      <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all duration-300 ${
+                            dg.status === 'Completed'
+                              ? 'bg-emerald-500'
+                              : dg.status === 'At Risk'
+                              ? 'bg-amber-500'
+                              : dg.status === 'Behind'
+                              ? 'bg-rose-500'
+                              : 'bg-blue-600'
+                          }`}
+                          style={{ width: `${dg.progressPercent}%` }}
+                        />
+                      </div>
                     </div>
                   )}
 

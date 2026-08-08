@@ -167,7 +167,32 @@ export const EditGoalModal: React.FC<EditGoalModalProps> = ({ isOpen, onClose, g
           </div>
 
           {/* Specific Fields depending on Goal Type */}
-          {isCompany ? (
+          {formData.companyId === 'next_academy' ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">Status</label>
+                <select
+                  value={formData.status || 'On Track'}
+                  onChange={e => setFormData({ ...formData, status: e.target.value })}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-sm text-slate-100 focus:outline-none focus:border-blue-500"
+                >
+                  <option value="On Track">On Track</option>
+                  <option value="At Risk">At Risk</option>
+                  <option value="Behind">Behind</option>
+                  <option value="Completed">Completed</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">Target Completion Date</label>
+                <input
+                  type="date"
+                  value={formData.targetDate || ''}
+                  onChange={e => setFormData({ ...formData, targetDate: e.target.value })}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-sm text-slate-100 focus:outline-none focus:border-blue-500"
+                />
+              </div>
+            </div>
+          ) : isCompany ? (
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-1">Target Metric</label>

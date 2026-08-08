@@ -53,6 +53,10 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({ isOpen, type, onCl
   const [goalTargetDate, setGoalTargetDate] = useState(new Date().toISOString().split('T')[0]);
   const [goalMilestones, setGoalMilestones] = useState<string[]>(['']);
   const [goalImpactLevel, setGoalImpactLevel] = useState<'High' | 'Medium' | 'Low'>('High');
+  const [goalAcademyRevCurrent, setGoalAcademyRevCurrent] = useState<string>('0');
+  const [goalAcademyRevTarget, setGoalAcademyRevTarget] = useState<string>('500000');
+  const [goalAcademyDaysCurrent, setGoalAcademyDaysCurrent] = useState<string>('0');
+  const [goalAcademyDaysTarget, setGoalAcademyDaysTarget] = useState<string>('40');
 
   // Form states for Activity
   const [actTitle, setActTitle] = useState('');
@@ -138,11 +142,17 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({ isOpen, type, onCl
       hodName: d.hod,
       title: goalTitle,
       description: goalDesc,
-      targetMetric: goalTargetMetric || 'Milestones Complete',
+      targetMetric: d.companyId === 'next_academy' ? 'Next Academy Specific Metrics' : (goalTargetMetric || 'Milestones Complete'),
       progressPercent: 0,
       status: 'On Track',
       targetDate: goalTargetDate,
       impactLevel: goalImpactLevel,
+      ...(d.companyId === 'next_academy' ? {
+        academyRevenueCurrent: Number(goalAcademyRevCurrent) || 0,
+        academyRevenueTarget: Number(goalAcademyRevTarget) || 500000,
+        academyTrainingDaysCurrent: Number(goalAcademyDaysCurrent) || 0,
+        academyTrainingDaysTarget: Number(goalAcademyDaysTarget) || 40,
+      } : {}),
       milestones: goalMilestones
         .filter((m) => m.trim() !== '')
         .map((m, i) => ({ id: `m_${Date.now()}_${i}`, title: m, completed: false })),
@@ -436,28 +446,83 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({ isOpen, type, onCl
               </select>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="font-bold text-slate-900 block mb-1">Target Metric</label>
-                <input
-                  type="text"
-                  value={goalTargetMetric}
-                  onChange={(e) => setGoalTargetMetric(e.target.value)}
-                  placeholder="e.g. RM 10M Signed Contracts"
-                  className="w-full bg-slate-50 p-2.5 rounded-xl border border-slate-300 text-slate-900 focus:outline-none focus:border-blue-600 focus:bg-white"
-                />
+            {departments.find(d => d.id === selectedDeptId)?.companyId === 'next_academy' ? (
+              <div className="p-3.5 bg-amber-50/80 border border-amber-200 rounded-xl space-y-3">
+                <div className="font-bold text-amber-900 text-xs uppercase tracking-wider">
+                  🎓 Next Academy Specific Metrics
+                </div>
+                <div className="grid grid-cols-2 gap-2.5">
+                  <div>
+                    <label className="font-bold text-slate-800 block text-[11px] mb-1">Current Revenue (RM)</label>
+                    <input
+                      type="number"
+                      value={goalAcademyRevCurrent}
+                      onChange={(e) => setGoalAcademyRevCurrent(e.target.value)}
+                      className="w-full bg-white p-2 rounded-lg border border-amber-300 text-slate-900 text-xs"
+                    />
+                  </div>
+                  <div>
+                    <label className="font-bold text-slate-800 block text-[11px] mb-1">Target Revenue (RM)</label>
+                    <input
+                      type="number"
+                      value={goalAcademyRevTarget}
+                      onChange={(e) => setGoalAcademyRevTarget(e.target.value)}
+                      className="w-full bg-white p-2 rounded-lg border border-amber-300 text-slate-900 text-xs"
+                    />
+                  </div>
+                  <div>
+                    <label className="font-bold text-slate-800 block text-[11px] mb-1">Days Conducted</label>
+                    <input
+                      type="number"
+                      value={goalAcademyDaysCurrent}
+                      onChange={(e) => setGoalAcademyDaysCurrent(e.target.value)}
+                      className="w-full bg-white p-2 rounded-lg border border-amber-300 text-slate-900 text-xs"
+                    />
+                  </div>
+                  <div>
+                    <label className="font-bold text-slate-800 block text-[11px] mb-1">Target Training Days</label>
+                    <input
+                      type="number"
+                      value={goalAcademyDaysTarget}
+                      onChange={(e) => setGoalAcademyDaysTarget(e.target.value)}
+                      className="w-full bg-white p-2 rounded-lg border border-amber-300 text-slate-900 text-xs"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="font-bold text-slate-900 block mb-1">Target Completion Date</label>
+                  <input
+                    type="date"
+                    value={goalTargetDate}
+                    onChange={(e) => setGoalTargetDate(e.target.value)}
+                    className="w-full bg-white p-2 rounded-lg border border-amber-300 text-slate-900 text-xs"
+                  />
+                </div>
               </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold text-slate-900 block mb-1">Target Metric</label>
+                  <input
+                    type="text"
+                    value={goalTargetMetric}
+                    onChange={(e) => setGoalTargetMetric(e.target.value)}
+                    placeholder="e.g. RM 10M Signed Contracts"
+                    className="w-full bg-slate-50 p-2.5 rounded-xl border border-slate-300 text-slate-900 focus:outline-none focus:border-blue-600 focus:bg-white"
+                  />
+                </div>
 
-              <div>
-                <label className="font-bold text-slate-900 block mb-1">Target Completion Date</label>
-                <input
-                  type="date"
-                  value={goalTargetDate}
-                  onChange={(e) => setGoalTargetDate(e.target.value)}
-                  className="w-full bg-slate-50 p-2.5 rounded-xl border border-slate-300 text-slate-900 focus:outline-none focus:border-blue-600 focus:bg-white"
-                />
+                <div>
+                  <label className="font-bold text-slate-900 block mb-1">Target Completion Date</label>
+                  <input
+                    type="date"
+                    value={goalTargetDate}
+                    onChange={(e) => setGoalTargetDate(e.target.value)}
+                    className="w-full bg-slate-50 p-2.5 rounded-xl border border-slate-300 text-slate-900 focus:outline-none focus:border-blue-600 focus:bg-white"
+                  />
+                </div>
               </div>
-            </div>
+            )}
 
             <div className="pt-2 flex justify-end gap-2">
               <button
