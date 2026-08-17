@@ -61,16 +61,16 @@ export const EditGoalModal: React.FC<EditGoalModalProps> = ({ isOpen, onClose, g
         title: formData.title,
         description: formData.description,
         targetMetric: formData.targetMetric,
-        currentValue: Number(formData.currentValue),
-        targetValue: Number(formData.targetValue),
-        unit: formData.unit,
+        currentValue: Number(formData.currentValue) || 0,
+        targetValue: Number(formData.targetValue) || 0,
+        unit: formData.unit || '',
         targetDate: formData.targetDate,
         overallRating: formData.overallRating,
         impactLevel: formData.impactLevel || 'Medium',
-        academyRevenueCurrent: formData.academyRevenueCurrent ? Number(formData.academyRevenueCurrent) : undefined,
-        academyRevenueTarget: formData.academyRevenueTarget ? Number(formData.academyRevenueTarget) : undefined,
-        academyTrainingDaysCurrent: formData.academyTrainingDaysCurrent ? Number(formData.academyTrainingDaysCurrent) : undefined,
-        academyTrainingDaysTarget: formData.academyTrainingDaysTarget ? Number(formData.academyTrainingDaysTarget) : undefined,
+        academyRevenueCurrent: (formData.academyRevenueCurrent !== undefined && formData.academyRevenueCurrent !== '') ? Number(formData.academyRevenueCurrent) : undefined,
+        academyRevenueTarget: (formData.academyRevenueTarget !== undefined && formData.academyRevenueTarget !== '') ? Number(formData.academyRevenueTarget) : undefined,
+        academyTrainingDaysCurrent: (formData.academyTrainingDaysCurrent !== undefined && formData.academyTrainingDaysCurrent !== '') ? Number(formData.academyTrainingDaysCurrent) : undefined,
+        academyTrainingDaysTarget: (formData.academyTrainingDaysTarget !== undefined && formData.academyTrainingDaysTarget !== '') ? Number(formData.academyTrainingDaysTarget) : undefined,
         milestones,
       });
     } else {
@@ -81,14 +81,14 @@ export const EditGoalModal: React.FC<EditGoalModalProps> = ({ isOpen, onClose, g
         departmentName: formData.departmentName,
         hodName: formData.hodName,
         targetMetric: formData.targetMetric,
-        progressPercent: Number(formData.progressPercent),
+        progressPercent: Math.max(0, Math.min(100, Number(formData.progressPercent) || 0)),
         status: formData.status,
         targetDate: formData.targetDate,
         impactLevel: formData.impactLevel || 'Medium',
-        academyRevenueCurrent: formData.academyRevenueCurrent ? Number(formData.academyRevenueCurrent) : undefined,
-        academyRevenueTarget: formData.academyRevenueTarget ? Number(formData.academyRevenueTarget) : undefined,
-        academyTrainingDaysCurrent: formData.academyTrainingDaysCurrent ? Number(formData.academyTrainingDaysCurrent) : undefined,
-        academyTrainingDaysTarget: formData.academyTrainingDaysTarget ? Number(formData.academyTrainingDaysTarget) : undefined,
+        academyRevenueCurrent: (formData.academyRevenueCurrent !== undefined && formData.academyRevenueCurrent !== '') ? Number(formData.academyRevenueCurrent) : undefined,
+        academyRevenueTarget: (formData.academyRevenueTarget !== undefined && formData.academyRevenueTarget !== '') ? Number(formData.academyRevenueTarget) : undefined,
+        academyTrainingDaysCurrent: (formData.academyTrainingDaysCurrent !== undefined && formData.academyTrainingDaysCurrent !== '') ? Number(formData.academyTrainingDaysCurrent) : undefined,
+        academyTrainingDaysTarget: (formData.academyTrainingDaysTarget !== undefined && formData.academyTrainingDaysTarget !== '') ? Number(formData.academyTrainingDaysTarget) : undefined,
         milestones,
       });
     }
@@ -166,62 +166,60 @@ export const EditGoalModal: React.FC<EditGoalModalProps> = ({ isOpen, onClose, g
             </select>
           </div>
 
-          {/* Specific Fields depending on Goal Type */}
-          {formData.companyId === 'next_academy' ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">Status</label>
-                <select
-                  value={formData.status || 'On Track'}
-                  onChange={e => setFormData({ ...formData, status: e.target.value })}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-sm text-slate-100 focus:outline-none focus:border-blue-500"
-                >
-                  <option value="On Track">On Track</option>
-                  <option value="At Risk">At Risk</option>
-                  <option value="Behind">Behind</option>
-                  <option value="Completed">Completed</option>
-                </select>
+          {isCompany ? (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">Target Metric</label>
+                  <input
+                    type="text"
+                    value={formData.targetMetric || ''}
+                    onChange={e => setFormData({ ...formData, targetMetric: e.target.value })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-sm text-slate-100 focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">Current Value</label>
+                  <input
+                    type="number"
+                    step="any"
+                    value={formData.currentValue ?? 0}
+                    onChange={e => setFormData({ ...formData, currentValue: e.target.value })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-sm text-slate-100 focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">Target Value ({formData.unit || 'Units'})</label>
+                  <input
+                    type="number"
+                    step="any"
+                    value={formData.targetValue ?? 0}
+                    onChange={e => setFormData({ ...formData, targetValue: e.target.value })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-sm text-slate-100 focus:outline-none focus:border-blue-500"
+                  />
+                </div>
               </div>
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">Target Completion Date</label>
-                <input
-                  type="date"
-                  value={formData.targetDate || ''}
-                  onChange={e => setFormData({ ...formData, targetDate: e.target.value })}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-sm text-slate-100 focus:outline-none focus:border-blue-500"
-                />
-              </div>
-            </div>
-          ) : isCompany ? (
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">Target Metric</label>
-                <input
-                  type="text"
-                  value={formData.targetMetric || ''}
-                  onChange={e => setFormData({ ...formData, targetMetric: e.target.value })}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-sm text-slate-100 focus:outline-none focus:border-blue-500"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">Current Value</label>
-                <input
-                  type="number"
-                  step="any"
-                  value={formData.currentValue ?? 0}
-                  onChange={e => setFormData({ ...formData, currentValue: e.target.value })}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-sm text-slate-100 focus:outline-none focus:border-blue-500"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">Target Value ({formData.unit || 'Units'})</label>
-                <input
-                  type="number"
-                  step="any"
-                  value={formData.targetValue ?? 0}
-                  onChange={e => setFormData({ ...formData, targetValue: e.target.value })}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-sm text-slate-100 focus:outline-none focus:border-blue-500"
-                />
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">Unit of Measurement</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. RM Million, Graduates, %"
+                    value={formData.unit || ''}
+                    onChange={e => setFormData({ ...formData, unit: e.target.value })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-sm text-slate-100 focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">Target Completion Date</label>
+                  <input
+                    type="date"
+                    value={formData.targetDate || ''}
+                    onChange={e => setFormData({ ...formData, targetDate: e.target.value })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-sm text-slate-100 focus:outline-none focus:border-blue-500"
+                  />
+                </div>
               </div>
             </div>
           ) : (

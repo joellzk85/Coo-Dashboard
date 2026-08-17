@@ -237,16 +237,37 @@ export const DashboardRoadmap: React.FC = () => {
 
               {filteredCompanyGoals.map((cg) => {
                 const targetQ = getQuarterCol(cg.targetDate);
+                const isAcademy = cg.companyId === 'next_academy';
+                const revCur = Math.max(0, Number(cg.academyRevenueCurrent) || 0);
+                const revTar = Math.max(0, Number(cg.academyRevenueTarget) || 0);
+                const revPct = revTar > 0 ? Math.max(0, Math.min(100, Math.round((revCur / revTar) * 100))) : 0;
+
+                const daysCur = Math.max(0, Number(cg.academyTrainingDaysCurrent) || 0);
+                const daysTar = Math.max(0, Number(cg.academyTrainingDaysTarget) || 0);
+                const daysPct = daysTar > 0 ? Math.max(0, Math.min(100, Math.round((daysCur / daysTar) * 100))) : 0;
+
                 const cur = Math.max(0, Number(cg.currentValue) || 0);
                 const tar = Math.max(0, Number(cg.targetValue) || 0);
-                const progressPct = tar > 0 ? Math.max(0, Math.min(100, Math.round((cur / tar) * 100))) : 0;
+
+                let progressPct = 0;
+                if (isAcademy && (revTar > 0 || daysTar > 0)) {
+                  let count = 0;
+                  let sum = 0;
+                  if (revTar > 0) { sum += revPct; count++; }
+                  if (daysTar > 0) { sum += daysPct; count++; }
+                  progressPct = count > 0 ? Math.round(sum / count) : 0;
+                } else {
+                  progressPct = tar > 0 ? Math.max(0, Math.min(100, Math.round((cur / tar) * 100))) : 0;
+                }
 
                 return (
                   <div key={cg.id} className="bg-slate-900 text-white rounded-xl p-4 shadow-md border border-slate-800 space-y-3">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <span className="bg-blue-600 text-white text-[10px] font-bold px-2 py-0.5 rounded uppercase">
-                          {cg.companyId === 'next_energy' ? 'Next Energy' : 'Next Academy'}
+                        <span className={`text-white text-[10px] font-bold px-2 py-0.5 rounded uppercase ${
+                          isAcademy ? 'bg-emerald-600' : 'bg-blue-600'
+                        }`}>
+                          {isAcademy ? 'Next Academy' : 'Next Energy'}
                         </span>
                         <h4 className="text-sm font-bold">{cg.title}</h4>
                       </div>
@@ -255,12 +276,24 @@ export const DashboardRoadmap: React.FC = () => {
 
                     {/* Progress Bar */}
                     <div className="space-y-1">
-                      <div className="flex justify-between text-[11px] text-slate-300">
-                        <span>{cg.targetMetric || 'Goal Metric'}: {cur} / {tar} {cg.unit || ''}</span>
-                        <span className="font-bold text-blue-400">{progressPct}%</span>
-                      </div>
+                      {isAcademy && (revTar > 0 || daysTar > 0) ? (
+                        <div className="flex justify-between text-[11px] text-slate-300">
+                          <span>
+                            Rev: RM {revCur.toLocaleString()} / RM {revTar.toLocaleString()} ({revPct}%) • Volume: {daysCur} / {daysTar} Days ({daysPct}%)
+                          </span>
+                          <span className="font-bold text-emerald-400">{progressPct}%</span>
+                        </div>
+                      ) : (
+                        <div className="flex justify-between text-[11px] text-slate-300">
+                          <span>{cg.targetMetric || 'Goal Metric'}: {cur} / {tar} {cg.unit || ''}</span>
+                          <span className="font-bold text-blue-400">{progressPct}%</span>
+                        </div>
+                      )}
                       <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
-                        <div className="bg-blue-500 h-full rounded-full transition-all duration-500" style={{ width: `${progressPct}%` }} />
+                        <div
+                          className={`h-full rounded-full transition-all duration-500 ${isAcademy ? 'bg-emerald-500' : 'bg-blue-500'}`}
+                          style={{ width: `${progressPct}%` }}
+                        />
                       </div>
                     </div>
 
