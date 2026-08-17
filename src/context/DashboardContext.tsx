@@ -1,5 +1,16 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import {
+  collection,
+  doc,
+  onSnapshot,
+  getDoc,
+  setDoc,
+  updateDoc,
+  deleteDoc,
+  writeBatch,
+} from 'firebase/firestore';
+import { db } from '../lib/firebase';
+import {
   Department,
   CompanyGoal,
   DepartmentGoal,
@@ -24,6 +35,8 @@ import {
   INITIAL_PERSONAL_AND_BIBLE,
   INITIAL_WELLNESS_LOGS
 } from '../data/initialSeedData';
+
+export type SyncStatus = 'synced' | 'syncing' | 'error' | 'offline';
 
 export interface FormulaAuditBreakdown {
   monthsEvaluated: string[];
@@ -68,6 +81,8 @@ interface DashboardContextType {
   selectedMonths: string[]; // Multi-month selection
   setSelectedMonths: (months: string[]) => void;
   toggleSelectedMonth: (month: string) => void;
+
+  syncStatus: SyncStatus;
   
   departments: Department[];
   companyGoals: CompanyGoal[];
@@ -81,83 +96,71 @@ interface DashboardContextType {
   wellnessLogs: WellnessLog[];
 
   // Goal CRUD actions
-  addCompanyGoal: (goal: Omit<CompanyGoal, 'id' | 'lastUpdated'>) => Promise<void> | void;
-  updateCompanyGoal: (id: string, goal: Partial<CompanyGoal>) => Promise<void> | void;
-  deleteCompanyGoal: (id: string) => Promise<void> | void;
-  toggleCompanyMilestone: (companyGoalId: string, milestoneId: string) => Promise<void> | void;
+  addCompanyGoal: (goal: Omit<CompanyGoal, 'id' | 'lastUpdated'>) => Promise<void>;
+  updateCompanyGoal: (id: string, goal: Partial<CompanyGoal>) => Promise<void>;
+  deleteCompanyGoal: (id: string) => Promise<void>;
+  toggleCompanyMilestone: (companyGoalId: string, milestoneId: string) => Promise<void>;
 
-  addDepartmentGoal: (goal: Omit<DepartmentGoal, 'id' | 'lastUpdated'>) => Promise<void> | void;
-  updateDepartmentGoal: (id: string, goal: Partial<DepartmentGoal>) => Promise<void> | void;
-  deleteDepartmentGoal: (id: string) => Promise<void> | void;
-  toggleDepartmentMilestone: (deptGoalId: string, milestoneId: string) => Promise<void> | void;
+  addDepartmentGoal: (goal: Omit<DepartmentGoal, 'id' | 'lastUpdated'>) => Promise<void>;
+  updateDepartmentGoal: (id: string, goal: Partial<DepartmentGoal>) => Promise<void>;
+  deleteDepartmentGoal: (id: string) => Promise<void>;
+  toggleDepartmentMilestone: (deptGoalId: string, milestoneId: string) => Promise<void>;
 
   // 121 Session actions
-  add121Session: (session: Omit<Session121, 'id' | 'createdAt'>) => Promise<void> | void;
-  update121Session: (id: string, session: Partial<Session121>) => Promise<void> | void;
-  delete121Session: (id: string) => Promise<void> | void;
+  add121Session: (session: Omit<Session121, 'id' | 'createdAt'>) => Promise<void>;
+  update121Session: (id: string, session: Partial<Session121>) => Promise<void>;
+  delete121Session: (id: string) => Promise<void>;
 
   // Automated KPI Grading
   getAutomatedKPIGradeForMonth: (monthYear: string) => MonthlyKPIGrade;
   getCumulativeKPIGradeForMonths: (months: string[]) => FormulaAuditBreakdown;
 
   // Personal Wellness actions
-  addWellnessLog: (log: Omit<WellnessLog, 'id' | 'createdAt'>) => Promise<void> | void;
-  updateWellnessLog: (id: string, log: Partial<WellnessLog>) => Promise<void> | void;
-  deleteWellnessLog: (id: string) => Promise<void> | void;
+  addWellnessLog: (log: Omit<WellnessLog, 'id' | 'createdAt'>) => Promise<void>;
+  updateWellnessLog: (id: string, log: Partial<WellnessLog>) => Promise<void>;
+  deleteWellnessLog: (id: string) => Promise<void>;
 
   // Activity Impact actions
-  addActivityLog: (log: Omit<ActivityImpactLog, 'id'>) => Promise<void> | void;
-  deleteActivityLog: (id: string) => Promise<void> | void;
+  addActivityLog: (log: Omit<ActivityImpactLog, 'id'>) => Promise<void>;
+  deleteActivityLog: (id: string) => Promise<void>;
 
   // Reflection actions
-  addReflection: (reflection: Omit<COOLearningReflection, 'id'>) => Promise<void> | void;
-  deleteReflection: (id: string) => Promise<void> | void;
+  addReflection: (reflection: Omit<COOLearningReflection, 'id'>) => Promise<void>;
+  deleteReflection: (id: string) => Promise<void>;
 
   // Reading Log actions
-  addReadingLog: (log: Omit<ReadingLog, 'id'>) => Promise<void> | void;
-  updateReadingLog: (id: string, log: Partial<ReadingLog>) => Promise<void> | void;
-  deleteReadingLog: (id: string) => Promise<void> | void;
+  addReadingLog: (log: Omit<ReadingLog, 'id'>) => Promise<void>;
+  updateReadingLog: (id: string, log: Partial<ReadingLog>) => Promise<void>;
+  deleteReadingLog: (id: string) => Promise<void>;
 
   // Personal Goal & Bible actions
-  addPersonalGoalOrBible: (item: Omit<PersonalGoalAndBible, 'id'>) => Promise<void> | void;
-  togglePersonalGoalOrBible: (id: string) => Promise<void> | void;
-  deletePersonalGoalOrBible: (id: string) => Promise<void> | void;
+  addPersonalGoalOrBible: (item: Omit<PersonalGoalAndBible, 'id'>) => Promise<void>;
+  togglePersonalGoalOrBible: (id: string) => Promise<void>;
+  deletePersonalGoalOrBible: (id: string) => Promise<void>;
 
   // Utilities
-  resetToDemoData: () => Promise<void> | void;
+  resetToDemoData: () => Promise<void>;
   exportDataJSON: () => string;
-  importDataJSON: (jsonStr: string) => Promise<boolean> | boolean;
+  importDataJSON: (jsonStr: string) => Promise<boolean>;
 }
 
-const STORAGE_KEYS = {
-  COMPANY_GOALS: 'coo_dash_company_goals_v2',
-  DEPT_GOALS: 'coo_dash_dept_goals_v2',
-  SESSIONS_121: 'coo_dash_sessions_121_v2',
-  ACTIVITY_LOGS: 'coo_dash_activity_logs_v2',
-  REFLECTIONS: 'coo_dash_reflections_v2',
-  READING_LOGS: 'coo_dash_reading_logs_v2',
-  PERSONAL_BIBLE: 'coo_dash_personal_bible_v2',
-  WELLNESS_LOGS: 'coo_dash_wellness_logs_v2',
-};
-
-function loadFromStorage<T>(key: string, fallback: T): T {
-  try {
-    const saved = localStorage.getItem(key);
-    if (saved) {
-      return JSON.parse(saved);
+// Utility to remove undefined keys before sending to Firestore
+function cleanObject<T extends Record<string, any>>(obj: T): T {
+  const res = {} as any;
+  Object.keys(obj).forEach((key) => {
+    if (obj[key] !== undefined) {
+      if (Array.isArray(obj[key])) {
+        res[key] = obj[key].map((item: any) =>
+          typeof item === 'object' && item !== null ? cleanObject(item) : item
+        );
+      } else if (typeof obj[key] === 'object' && obj[key] !== null) {
+        res[key] = cleanObject(obj[key]);
+      } else {
+        res[key] = obj[key];
+      }
     }
-  } catch (err) {
-    console.error(`Failed to load ${key} from localStorage:`, err);
-  }
-  return fallback;
-}
-
-function saveToStorage<T>(key: string, data: T) {
-  try {
-    localStorage.setItem(key, JSON.stringify(data));
-  } catch (err) {
-    console.error(`Failed to save ${key} to localStorage:`, err);
-  }
+  });
+  return res;
 }
 
 const DashboardContext = createContext<DashboardContextType | undefined>(undefined);
@@ -166,66 +169,87 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [selectedCompany, setSelectedCompany] = useState<CompanyId | 'all'>('all');
   const [selectedMonth, setSelectedMonth] = useState<string>('2026-08');
   const [selectedMonths, setSelectedMonths] = useState<string[]>(['2026-08', '2026-07']);
+  const [syncStatus, setSyncStatus] = useState<SyncStatus>('syncing');
 
   const [departments] = useState<Department[]>(INITIAL_DEPARTMENTS);
-  const [companyGoals, setCompanyGoals] = useState<CompanyGoal[]>(() =>
-    loadFromStorage(STORAGE_KEYS.COMPANY_GOALS, INITIAL_COMPANY_GOALS)
-  );
-  const [departmentGoals, setDepartmentGoals] = useState<DepartmentGoal[]>(() =>
-    loadFromStorage(STORAGE_KEYS.DEPT_GOALS, INITIAL_DEPARTMENT_GOALS)
-  );
-  const [sessions121, setSessions121] = useState<Session121[]>(() =>
-    loadFromStorage(STORAGE_KEYS.SESSIONS_121, INITIAL_121_SESSIONS)
-  );
+  const [companyGoals, setCompanyGoals] = useState<CompanyGoal[]>(INITIAL_COMPANY_GOALS);
+  const [departmentGoals, setDepartmentGoals] = useState<DepartmentGoal[]>(INITIAL_DEPARTMENT_GOALS);
+  const [sessions121, setSessions121] = useState<Session121[]>(INITIAL_121_SESSIONS);
   const [kpiGrades] = useState<MonthlyKPIGrade[]>(INITIAL_KPI_GRADES);
-  const [activityLogs, setActivityLogs] = useState<ActivityImpactLog[]>(() =>
-    loadFromStorage(STORAGE_KEYS.ACTIVITY_LOGS, INITIAL_ACTIVITY_LOGS)
-  );
-  const [reflections, setReflections] = useState<COOLearningReflection[]>(() =>
-    loadFromStorage(STORAGE_KEYS.REFLECTIONS, INITIAL_REFLECTIONS)
-  );
-  const [readingLogs, setReadingLogs] = useState<ReadingLog[]>(() =>
-    loadFromStorage(STORAGE_KEYS.READING_LOGS, INITIAL_READING_LOGS)
-  );
-  const [personalGoalsAndBible, setPersonalGoalsAndBible] = useState<PersonalGoalAndBible[]>(() =>
-    loadFromStorage(STORAGE_KEYS.PERSONAL_BIBLE, INITIAL_PERSONAL_AND_BIBLE)
-  );
-  const [wellnessLogs, setWellnessLogs] = useState<WellnessLog[]>(() =>
-    loadFromStorage(STORAGE_KEYS.WELLNESS_LOGS, INITIAL_WELLNESS_LOGS)
-  );
+  const [activityLogs, setActivityLogs] = useState<ActivityImpactLog[]>(INITIAL_ACTIVITY_LOGS);
+  const [reflections, setReflections] = useState<COOLearningReflection[]>(INITIAL_REFLECTIONS);
+  const [readingLogs, setReadingLogs] = useState<ReadingLog[]>(INITIAL_READING_LOGS);
+  const [personalGoalsAndBible, setPersonalGoalsAndBible] = useState<PersonalGoalAndBible[]>(INITIAL_PERSONAL_AND_BIBLE);
+  const [wellnessLogs, setWellnessLogs] = useState<WellnessLog[]>(INITIAL_WELLNESS_LOGS);
 
-  // Sync to local storage on state change
+  // Firestore Real-Time Sync across all devices (Single-user shared executive workspace)
   useEffect(() => {
-    saveToStorage(STORAGE_KEYS.COMPANY_GOALS, companyGoals);
-  }, [companyGoals]);
+    setSyncStatus('syncing');
+    const unsubs: Array<() => void> = [];
 
-  useEffect(() => {
-    saveToStorage(STORAGE_KEYS.DEPT_GOALS, departmentGoals);
-  }, [departmentGoals]);
+    const setupCollectionListener = <T extends { id: string }>(
+      colName: string,
+      initialData: T[],
+      setState: React.Dispatch<React.SetStateAction<T[]>>
+    ) => {
+      const colRef = collection(db, 'executive_workspace', 'data', colName);
+      const seedMarkerRef = doc(db, 'executive_workspace', 'data', '_meta', colName);
 
-  useEffect(() => {
-    saveToStorage(STORAGE_KEYS.SESSIONS_121, sessions121);
-  }, [sessions121]);
+      const unsub = onSnapshot(
+        colRef,
+        async (snapshot) => {
+          if (!snapshot.empty) {
+            const items = snapshot.docs.map((d) => d.data() as T);
+            setState(items);
+            setSyncStatus('synced');
+          } else {
+            // Check if seeded before
+            try {
+              const markerSnap = await getDoc(seedMarkerRef);
+              if (markerSnap.exists()) {
+                // Legitimate empty list (user deleted items)
+                setState([]);
+                setSyncStatus('synced');
+              } else {
+                // First-time load: seed initial starter data to cloud
+                setState(initialData);
+                setSyncStatus('synced');
+                const batch = writeBatch(db);
+                initialData.forEach((item) => {
+                  const itemRef = doc(db, 'executive_workspace', 'data', colName, item.id);
+                  batch.set(itemRef, cleanObject(item));
+                });
+                batch.set(seedMarkerRef, { seededAt: new Date().toISOString() });
+                await batch.commit();
+              }
+            } catch (e) {
+              console.error(`Error initializing collection ${colName}:`, e);
+              setSyncStatus('error');
+            }
+          }
+        },
+        (err) => {
+          console.error(`Firestore snapshot error for ${colName}:`, err);
+          setSyncStatus('error');
+        }
+      );
 
-  useEffect(() => {
-    saveToStorage(STORAGE_KEYS.ACTIVITY_LOGS, activityLogs);
-  }, [activityLogs]);
+      unsubs.push(unsub);
+    };
 
-  useEffect(() => {
-    saveToStorage(STORAGE_KEYS.REFLECTIONS, reflections);
-  }, [reflections]);
+    setupCollectionListener('companyGoals', INITIAL_COMPANY_GOALS, setCompanyGoals);
+    setupCollectionListener('departmentGoals', INITIAL_DEPARTMENT_GOALS, setDepartmentGoals);
+    setupCollectionListener('sessions121', INITIAL_121_SESSIONS, setSessions121);
+    setupCollectionListener('activityLogs', INITIAL_ACTIVITY_LOGS, setActivityLogs);
+    setupCollectionListener('reflections', INITIAL_REFLECTIONS, setReflections);
+    setupCollectionListener('readingLogs', INITIAL_READING_LOGS, setReadingLogs);
+    setupCollectionListener('personalGoalsAndBible', INITIAL_PERSONAL_AND_BIBLE, setPersonalGoalsAndBible);
+    setupCollectionListener('wellnessLogs', INITIAL_WELLNESS_LOGS, setWellnessLogs);
 
-  useEffect(() => {
-    saveToStorage(STORAGE_KEYS.READING_LOGS, readingLogs);
-  }, [readingLogs]);
-
-  useEffect(() => {
-    saveToStorage(STORAGE_KEYS.PERSONAL_BIBLE, personalGoalsAndBible);
-  }, [personalGoalsAndBible]);
-
-  useEffect(() => {
-    saveToStorage(STORAGE_KEYS.WELLNESS_LOGS, wellnessLogs);
-  }, [wellnessLogs]);
+    return () => {
+      unsubs.forEach((unsub) => unsub());
+    };
+  }, []);
 
   const toggleSelectedMonth = (month: string) => {
     setSelectedMonths((prev) => {
@@ -238,7 +262,7 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   };
 
   // --- Company Goals CRUD ---
-  const addCompanyGoal = (goal: Omit<CompanyGoal, 'id' | 'lastUpdated'>) => {
+  const addCompanyGoal = async (goal: Omit<CompanyGoal, 'id' | 'lastUpdated'>) => {
     const id = `cg_${Date.now()}`;
     const newGoal: CompanyGoal = {
       ...goal,
@@ -246,44 +270,71 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       lastUpdated: new Date().toISOString().split('T')[0],
     };
     setCompanyGoals((prev) => [newGoal, ...prev]);
+    try {
+      setSyncStatus('syncing');
+      await setDoc(doc(db, 'executive_workspace', 'data', 'companyGoals', id), cleanObject(newGoal));
+      setSyncStatus('synced');
+    } catch (err) {
+      console.error('Error adding company goal to cloud:', err);
+      setSyncStatus('error');
+    }
   };
 
-  const updateCompanyGoal = (id: string, partial: Partial<CompanyGoal>) => {
-    setCompanyGoals((prev) =>
-      prev.map((g) =>
-        g.id === id
-          ? {
-              ...g,
-              ...partial,
-              lastUpdated: new Date().toISOString().split('T')[0],
-            }
-          : g
-      )
-    );
+  const updateCompanyGoal = async (id: string, partial: Partial<CompanyGoal>) => {
+    const existing = companyGoals.find((g) => g.id === id);
+    if (!existing) return;
+    const updated: CompanyGoal = {
+      ...existing,
+      ...partial,
+      lastUpdated: new Date().toISOString().split('T')[0],
+    };
+    setCompanyGoals((prev) => prev.map((g) => (g.id === id ? updated : g)));
+    try {
+      setSyncStatus('syncing');
+      await setDoc(doc(db, 'executive_workspace', 'data', 'companyGoals', id), cleanObject(updated));
+      setSyncStatus('synced');
+    } catch (err) {
+      console.error('Error updating company goal in cloud:', err);
+      setSyncStatus('error');
+    }
   };
 
-  const deleteCompanyGoal = (id: string) => {
+  const deleteCompanyGoal = async (id: string) => {
     setCompanyGoals((prev) => prev.filter((g) => g.id !== id));
+    try {
+      setSyncStatus('syncing');
+      await deleteDoc(doc(db, 'executive_workspace', 'data', 'companyGoals', id));
+      setSyncStatus('synced');
+    } catch (err) {
+      console.error('Error deleting company goal in cloud:', err);
+      setSyncStatus('error');
+    }
   };
 
-  const toggleCompanyMilestone = (companyGoalId: string, milestoneId: string) => {
-    setCompanyGoals((prev) =>
-      prev.map((g) => {
-        if (g.id !== companyGoalId) return g;
-        const updatedMilestones = g.milestones.map((m) =>
-          m.id === milestoneId ? { ...m, completed: !m.completed } : m
-        );
-        return {
-          ...g,
-          milestones: updatedMilestones,
-          lastUpdated: new Date().toISOString().split('T')[0],
-        };
-      })
+  const toggleCompanyMilestone = async (companyGoalId: string, milestoneId: string) => {
+    const existing = companyGoals.find((g) => g.id === companyGoalId);
+    if (!existing) return;
+    const updatedMilestones = existing.milestones.map((m) =>
+      m.id === milestoneId ? { ...m, completed: !m.completed } : m
     );
+    const updated: CompanyGoal = {
+      ...existing,
+      milestones: updatedMilestones,
+      lastUpdated: new Date().toISOString().split('T')[0],
+    };
+    setCompanyGoals((prev) => prev.map((g) => (g.id === companyGoalId ? updated : g)));
+    try {
+      setSyncStatus('syncing');
+      await setDoc(doc(db, 'executive_workspace', 'data', 'companyGoals', companyGoalId), cleanObject(updated));
+      setSyncStatus('synced');
+    } catch (err) {
+      console.error('Error toggling milestone in cloud:', err);
+      setSyncStatus('error');
+    }
   };
 
   // --- Department Goals CRUD ---
-  const addDepartmentGoal = (goal: Omit<DepartmentGoal, 'id' | 'lastUpdated'>) => {
+  const addDepartmentGoal = async (goal: Omit<DepartmentGoal, 'id' | 'lastUpdated'>) => {
     const id = `dg_${Date.now()}`;
     const newGoal: DepartmentGoal = {
       ...goal,
@@ -291,44 +342,71 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       lastUpdated: new Date().toISOString().split('T')[0],
     };
     setDepartmentGoals((prev) => [newGoal, ...prev]);
+    try {
+      setSyncStatus('syncing');
+      await setDoc(doc(db, 'executive_workspace', 'data', 'departmentGoals', id), cleanObject(newGoal));
+      setSyncStatus('synced');
+    } catch (err) {
+      console.error('Error adding department goal to cloud:', err);
+      setSyncStatus('error');
+    }
   };
 
-  const updateDepartmentGoal = (id: string, partial: Partial<DepartmentGoal>) => {
-    setDepartmentGoals((prev) =>
-      prev.map((g) =>
-        g.id === id
-          ? {
-              ...g,
-              ...partial,
-              lastUpdated: new Date().toISOString().split('T')[0],
-            }
-          : g
-      )
-    );
+  const updateDepartmentGoal = async (id: string, partial: Partial<DepartmentGoal>) => {
+    const existing = departmentGoals.find((g) => g.id === id);
+    if (!existing) return;
+    const updated: DepartmentGoal = {
+      ...existing,
+      ...partial,
+      lastUpdated: new Date().toISOString().split('T')[0],
+    };
+    setDepartmentGoals((prev) => prev.map((g) => (g.id === id ? updated : g)));
+    try {
+      setSyncStatus('syncing');
+      await setDoc(doc(db, 'executive_workspace', 'data', 'departmentGoals', id), cleanObject(updated));
+      setSyncStatus('synced');
+    } catch (err) {
+      console.error('Error updating department goal in cloud:', err);
+      setSyncStatus('error');
+    }
   };
 
-  const deleteDepartmentGoal = (id: string) => {
+  const deleteDepartmentGoal = async (id: string) => {
     setDepartmentGoals((prev) => prev.filter((g) => g.id !== id));
+    try {
+      setSyncStatus('syncing');
+      await deleteDoc(doc(db, 'executive_workspace', 'data', 'departmentGoals', id));
+      setSyncStatus('synced');
+    } catch (err) {
+      console.error('Error deleting department goal in cloud:', err);
+      setSyncStatus('error');
+    }
   };
 
-  const toggleDepartmentMilestone = (deptGoalId: string, milestoneId: string) => {
-    setDepartmentGoals((prev) =>
-      prev.map((g) => {
-        if (g.id !== deptGoalId) return g;
-        const updatedMilestones = g.milestones.map((m) =>
-          m.id === milestoneId ? { ...m, completed: !m.completed } : m
-        );
-        return {
-          ...g,
-          milestones: updatedMilestones,
-          lastUpdated: new Date().toISOString().split('T')[0],
-        };
-      })
+  const toggleDepartmentMilestone = async (deptGoalId: string, milestoneId: string) => {
+    const existing = departmentGoals.find((g) => g.id === deptGoalId);
+    if (!existing) return;
+    const updatedMilestones = existing.milestones.map((m) =>
+      m.id === milestoneId ? { ...m, completed: !m.completed } : m
     );
+    const updated: DepartmentGoal = {
+      ...existing,
+      milestones: updatedMilestones,
+      lastUpdated: new Date().toISOString().split('T')[0],
+    };
+    setDepartmentGoals((prev) => prev.map((g) => (g.id === deptGoalId ? updated : g)));
+    try {
+      setSyncStatus('syncing');
+      await setDoc(doc(db, 'executive_workspace', 'data', 'departmentGoals', deptGoalId), cleanObject(updated));
+      setSyncStatus('synced');
+    } catch (err) {
+      console.error('Error toggling department milestone in cloud:', err);
+      setSyncStatus('error');
+    }
   };
 
   // --- 121 Sessions CRUD ---
-  const add121Session = (session: Omit<Session121, 'id' | 'createdAt'>) => {
+  const add121Session = async (session: Omit<Session121, 'id' | 'createdAt'>) => {
     const id = `s121_${Date.now()}`;
     const newSession: Session121 = {
       ...session,
@@ -336,18 +414,45 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       createdAt: new Date().toISOString(),
     };
     setSessions121((prev) => [newSession, ...prev]);
+    try {
+      setSyncStatus('syncing');
+      await setDoc(doc(db, 'executive_workspace', 'data', 'sessions121', id), cleanObject(newSession));
+      setSyncStatus('synced');
+    } catch (err) {
+      console.error('Error adding 121 session to cloud:', err);
+      setSyncStatus('error');
+    }
   };
 
-  const update121Session = (id: string, partial: Partial<Session121>) => {
-    setSessions121((prev) => prev.map((s) => (s.id === id ? { ...s, ...partial } : s)));
+  const update121Session = async (id: string, partial: Partial<Session121>) => {
+    const existing = sessions121.find((s) => s.id === id);
+    if (!existing) return;
+    const updated = { ...existing, ...partial };
+    setSessions121((prev) => prev.map((s) => (s.id === id ? updated : s)));
+    try {
+      setSyncStatus('syncing');
+      await setDoc(doc(db, 'executive_workspace', 'data', 'sessions121', id), cleanObject(updated));
+      setSyncStatus('synced');
+    } catch (err) {
+      console.error('Error updating 121 session in cloud:', err);
+      setSyncStatus('error');
+    }
   };
 
-  const delete121Session = (id: string) => {
+  const delete121Session = async (id: string) => {
     setSessions121((prev) => prev.filter((s) => s.id !== id));
+    try {
+      setSyncStatus('syncing');
+      await deleteDoc(doc(db, 'executive_workspace', 'data', 'sessions121', id));
+      setSyncStatus('synced');
+    } catch (err) {
+      console.error('Error deleting 121 session from cloud:', err);
+      setSyncStatus('error');
+    }
   };
 
   // --- Personal Wellness Logs CRUD ---
-  const addWellnessLog = (log: Omit<WellnessLog, 'id' | 'createdAt'>) => {
+  const addWellnessLog = async (log: Omit<WellnessLog, 'id' | 'createdAt'>) => {
     const id = `well_${Date.now()}`;
     const newLog: WellnessLog = {
       ...log,
@@ -355,68 +460,181 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       createdAt: new Date().toISOString(),
     };
     setWellnessLogs((prev) => [newLog, ...prev]);
+    try {
+      setSyncStatus('syncing');
+      await setDoc(doc(db, 'executive_workspace', 'data', 'wellnessLogs', id), cleanObject(newLog));
+      setSyncStatus('synced');
+    } catch (err) {
+      console.error('Error adding wellness log to cloud:', err);
+      setSyncStatus('error');
+    }
   };
 
-  const updateWellnessLog = (id: string, partial: Partial<WellnessLog>) => {
-    setWellnessLogs((prev) => prev.map((w) => (w.id === id ? { ...w, ...partial } : w)));
+  const updateWellnessLog = async (id: string, partial: Partial<WellnessLog>) => {
+    const existing = wellnessLogs.find((w) => w.id === id);
+    if (!existing) return;
+    const updated = { ...existing, ...partial };
+    setWellnessLogs((prev) => prev.map((w) => (w.id === id ? updated : w)));
+    try {
+      setSyncStatus('syncing');
+      await setDoc(doc(db, 'executive_workspace', 'data', 'wellnessLogs', id), cleanObject(updated));
+      setSyncStatus('synced');
+    } catch (err) {
+      console.error('Error updating wellness log in cloud:', err);
+      setSyncStatus('error');
+    }
   };
 
-  const deleteWellnessLog = (id: string) => {
+  const deleteWellnessLog = async (id: string) => {
     setWellnessLogs((prev) => prev.filter((w) => w.id !== id));
+    try {
+      setSyncStatus('syncing');
+      await deleteDoc(doc(db, 'executive_workspace', 'data', 'wellnessLogs', id));
+      setSyncStatus('synced');
+    } catch (err) {
+      console.error('Error deleting wellness log from cloud:', err);
+      setSyncStatus('error');
+    }
   };
 
   // --- Activity Logs CRUD ---
-  const addActivityLog = (log: Omit<ActivityImpactLog, 'id'>) => {
+  const addActivityLog = async (log: Omit<ActivityImpactLog, 'id'>) => {
     const id = `act_${Date.now()}`;
     const newLog: ActivityImpactLog = { ...log, id };
     setActivityLogs((prev) => [newLog, ...prev]);
+    try {
+      setSyncStatus('syncing');
+      await setDoc(doc(db, 'executive_workspace', 'data', 'activityLogs', id), cleanObject(newLog));
+      setSyncStatus('synced');
+    } catch (err) {
+      console.error('Error adding activity log to cloud:', err);
+      setSyncStatus('error');
+    }
   };
 
-  const deleteActivityLog = (id: string) => {
+  const deleteActivityLog = async (id: string) => {
     setActivityLogs((prev) => prev.filter((a) => a.id !== id));
+    try {
+      setSyncStatus('syncing');
+      await deleteDoc(doc(db, 'executive_workspace', 'data', 'activityLogs', id));
+      setSyncStatus('synced');
+    } catch (err) {
+      console.error('Error deleting activity log from cloud:', err);
+      setSyncStatus('error');
+    }
   };
 
   // --- Reflections CRUD ---
-  const addReflection = (reflection: Omit<COOLearningReflection, 'id'>) => {
+  const addReflection = async (reflection: Omit<COOLearningReflection, 'id'>) => {
     const id = `ref_${Date.now()}`;
     const newRef: COOLearningReflection = { ...reflection, id };
     setReflections((prev) => [newRef, ...prev]);
+    try {
+      setSyncStatus('syncing');
+      await setDoc(doc(db, 'executive_workspace', 'data', 'reflections', id), cleanObject(newRef));
+      setSyncStatus('synced');
+    } catch (err) {
+      console.error('Error adding reflection to cloud:', err);
+      setSyncStatus('error');
+    }
   };
 
-  const deleteReflection = (id: string) => {
+  const deleteReflection = async (id: string) => {
     setReflections((prev) => prev.filter((r) => r.id !== id));
+    try {
+      setSyncStatus('syncing');
+      await deleteDoc(doc(db, 'executive_workspace', 'data', 'reflections', id));
+      setSyncStatus('synced');
+    } catch (err) {
+      console.error('Error deleting reflection from cloud:', err);
+      setSyncStatus('error');
+    }
   };
 
   // --- Reading Logs CRUD ---
-  const addReadingLog = (log: Omit<ReadingLog, 'id'>) => {
+  const addReadingLog = async (log: Omit<ReadingLog, 'id'>) => {
     const id = `book_${Date.now()}`;
     const newLog: ReadingLog = { ...log, id };
     setReadingLogs((prev) => [newLog, ...prev]);
+    try {
+      setSyncStatus('syncing');
+      await setDoc(doc(db, 'executive_workspace', 'data', 'readingLogs', id), cleanObject(newLog));
+      setSyncStatus('synced');
+    } catch (err) {
+      console.error('Error adding reading log to cloud:', err);
+      setSyncStatus('error');
+    }
   };
 
-  const updateReadingLog = (id: string, partial: Partial<ReadingLog>) => {
-    setReadingLogs((prev) => prev.map((r) => (r.id === id ? { ...r, ...partial } : r)));
+  const updateReadingLog = async (id: string, partial: Partial<ReadingLog>) => {
+    const existing = readingLogs.find((r) => r.id === id);
+    if (!existing) return;
+    const updated = { ...existing, ...partial };
+    setReadingLogs((prev) => prev.map((r) => (r.id === id ? updated : r)));
+    try {
+      setSyncStatus('syncing');
+      await setDoc(doc(db, 'executive_workspace', 'data', 'readingLogs', id), cleanObject(updated));
+      setSyncStatus('synced');
+    } catch (err) {
+      console.error('Error updating reading log in cloud:', err);
+      setSyncStatus('error');
+    }
   };
 
-  const deleteReadingLog = (id: string) => {
+  const deleteReadingLog = async (id: string) => {
     setReadingLogs((prev) => prev.filter((r) => r.id !== id));
+    try {
+      setSyncStatus('syncing');
+      await deleteDoc(doc(db, 'executive_workspace', 'data', 'readingLogs', id));
+      setSyncStatus('synced');
+    } catch (err) {
+      console.error('Error deleting reading log from cloud:', err);
+      setSyncStatus('error');
+    }
   };
 
   // --- Personal Goal & Bible CRUD ---
-  const addPersonalGoalOrBible = (item: Omit<PersonalGoalAndBible, 'id'>) => {
+  const addPersonalGoalOrBible = async (item: Omit<PersonalGoalAndBible, 'id'>) => {
     const id = `pb_${Date.now()}`;
     const newItem: PersonalGoalAndBible = { ...item, id };
     setPersonalGoalsAndBible((prev) => [newItem, ...prev]);
+    try {
+      setSyncStatus('syncing');
+      await setDoc(doc(db, 'executive_workspace', 'data', 'personalGoalsAndBible', id), cleanObject(newItem));
+      setSyncStatus('synced');
+    } catch (err) {
+      console.error('Error adding personal goal to cloud:', err);
+      setSyncStatus('error');
+    }
   };
 
-  const togglePersonalGoalOrBible = (id: string) => {
-    setPersonalGoalsAndBible((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, completed: !p.completed } : p))
-    );
+  const togglePersonalGoalOrBible = async (id: string) => {
+    const existing = personalGoalsAndBible.find((p) => p.id === id);
+    if (!existing) return;
+    const updated = { ...existing, completed: !existing.completed };
+    setPersonalGoalsAndBible((prev) => prev.map((p) => (p.id === id ? updated : p)));
+    try {
+      setSyncStatus('syncing');
+      await updateDoc(doc(db, 'executive_workspace', 'data', 'personalGoalsAndBible', id), {
+        completed: updated.completed,
+      });
+      setSyncStatus('synced');
+    } catch (err) {
+      console.error('Error toggling personal goal in cloud:', err);
+      setSyncStatus('error');
+    }
   };
 
-  const deletePersonalGoalOrBible = (id: string) => {
+  const deletePersonalGoalOrBible = async (id: string) => {
     setPersonalGoalsAndBible((prev) => prev.filter((p) => p.id !== id));
+    try {
+      setSyncStatus('syncing');
+      await deleteDoc(doc(db, 'executive_workspace', 'data', 'personalGoalsAndBible', id));
+      setSyncStatus('synced');
+    } catch (err) {
+      console.error('Error deleting personal goal from cloud:', err);
+      setSyncStatus('error');
+    }
   };
 
   // Helper function for goal impact weights
@@ -697,8 +915,9 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     };
   };
 
-  // Reset to Demo Data in Local Storage
-  const resetToDemoData = () => {
+  // Reset to Demo Data in Cloud Firestore
+  const resetToDemoData = async () => {
+    setSyncStatus('syncing');
     setCompanyGoals(INITIAL_COMPANY_GOALS);
     setDepartmentGoals(INITIAL_DEPARTMENT_GOALS);
     setSessions121(INITIAL_121_SESSIONS);
@@ -708,14 +927,30 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setPersonalGoalsAndBible(INITIAL_PERSONAL_AND_BIBLE);
     setWellnessLogs(INITIAL_WELLNESS_LOGS);
 
-    saveToStorage(STORAGE_KEYS.COMPANY_GOALS, INITIAL_COMPANY_GOALS);
-    saveToStorage(STORAGE_KEYS.DEPT_GOALS, INITIAL_DEPARTMENT_GOALS);
-    saveToStorage(STORAGE_KEYS.SESSIONS_121, INITIAL_121_SESSIONS);
-    saveToStorage(STORAGE_KEYS.ACTIVITY_LOGS, INITIAL_ACTIVITY_LOGS);
-    saveToStorage(STORAGE_KEYS.REFLECTIONS, INITIAL_REFLECTIONS);
-    saveToStorage(STORAGE_KEYS.READING_LOGS, INITIAL_READING_LOGS);
-    saveToStorage(STORAGE_KEYS.PERSONAL_BIBLE, INITIAL_PERSONAL_AND_BIBLE);
-    saveToStorage(STORAGE_KEYS.WELLNESS_LOGS, INITIAL_WELLNESS_LOGS);
+    try {
+      const batch = writeBatch(db);
+      const seedCol = <T extends { id: string }>(colName: string, items: T[]) => {
+        items.forEach((item) => {
+          const itemRef = doc(db, 'executive_workspace', 'data', colName, item.id);
+          batch.set(itemRef, cleanObject(item));
+        });
+      };
+
+      seedCol('companyGoals', INITIAL_COMPANY_GOALS);
+      seedCol('departmentGoals', INITIAL_DEPARTMENT_GOALS);
+      seedCol('sessions121', INITIAL_121_SESSIONS);
+      seedCol('activityLogs', INITIAL_ACTIVITY_LOGS);
+      seedCol('reflections', INITIAL_REFLECTIONS);
+      seedCol('readingLogs', INITIAL_READING_LOGS);
+      seedCol('personalGoalsAndBible', INITIAL_PERSONAL_AND_BIBLE);
+      seedCol('wellnessLogs', INITIAL_WELLNESS_LOGS);
+
+      await batch.commit();
+      setSyncStatus('synced');
+    } catch (err) {
+      console.error('Error resetting demo data in cloud:', err);
+      setSyncStatus('error');
+    }
   };
 
   const exportDataJSON = () => {
@@ -733,20 +968,67 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     return JSON.stringify(data, null, 2);
   };
 
-  const importDataJSON = (jsonStr: string): boolean => {
+  const importDataJSON = async (jsonStr: string): Promise<boolean> => {
     try {
       const parsed = JSON.parse(jsonStr);
-      if (parsed.companyGoals) setCompanyGoals(parsed.companyGoals);
-      if (parsed.departmentGoals) setDepartmentGoals(parsed.departmentGoals);
-      if (parsed.sessions121) setSessions121(parsed.sessions121);
-      if (parsed.activityLogs) setActivityLogs(parsed.activityLogs);
-      if (parsed.reflections) setReflections(parsed.reflections);
-      if (parsed.readingLogs) setReadingLogs(parsed.readingLogs);
-      if (parsed.personalGoalsAndBible) setPersonalGoalsAndBible(parsed.personalGoalsAndBible);
-      if (parsed.wellnessLogs) setWellnessLogs(parsed.wellnessLogs);
+      setSyncStatus('syncing');
+      const batch = writeBatch(db);
+
+      if (parsed.companyGoals) {
+        setCompanyGoals(parsed.companyGoals);
+        parsed.companyGoals.forEach((g: any) => {
+          batch.set(doc(db, 'executive_workspace', 'data', 'companyGoals', g.id), cleanObject(g));
+        });
+      }
+      if (parsed.departmentGoals) {
+        setDepartmentGoals(parsed.departmentGoals);
+        parsed.departmentGoals.forEach((g: any) => {
+          batch.set(doc(db, 'executive_workspace', 'data', 'departmentGoals', g.id), cleanObject(g));
+        });
+      }
+      if (parsed.sessions121) {
+        setSessions121(parsed.sessions121);
+        parsed.sessions121.forEach((s: any) => {
+          batch.set(doc(db, 'executive_workspace', 'data', 'sessions121', s.id), cleanObject(s));
+        });
+      }
+      if (parsed.activityLogs) {
+        setActivityLogs(parsed.activityLogs);
+        parsed.activityLogs.forEach((a: any) => {
+          batch.set(doc(db, 'executive_workspace', 'data', 'activityLogs', a.id), cleanObject(a));
+        });
+      }
+      if (parsed.reflections) {
+        setReflections(parsed.reflections);
+        parsed.reflections.forEach((r: any) => {
+          batch.set(doc(db, 'executive_workspace', 'data', 'reflections', r.id), cleanObject(r));
+        });
+      }
+      if (parsed.readingLogs) {
+        setReadingLogs(parsed.readingLogs);
+        parsed.readingLogs.forEach((b: any) => {
+          batch.set(doc(db, 'executive_workspace', 'data', 'readingLogs', b.id), cleanObject(b));
+        });
+      }
+      if (parsed.personalGoalsAndBible) {
+        setPersonalGoalsAndBible(parsed.personalGoalsAndBible);
+        parsed.personalGoalsAndBible.forEach((p: any) => {
+          batch.set(doc(db, 'executive_workspace', 'data', 'personalGoalsAndBible', p.id), cleanObject(p));
+        });
+      }
+      if (parsed.wellnessLogs) {
+        setWellnessLogs(parsed.wellnessLogs);
+        parsed.wellnessLogs.forEach((w: any) => {
+          batch.set(doc(db, 'executive_workspace', 'data', 'wellnessLogs', w.id), cleanObject(w));
+        });
+      }
+
+      await batch.commit();
+      setSyncStatus('synced');
       return true;
     } catch (e) {
-      console.error('Failed to import JSON data:', e);
+      console.error('Failed to import JSON data to cloud:', e);
+      setSyncStatus('error');
       return false;
     }
   };
@@ -761,6 +1043,7 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         selectedMonths,
         setSelectedMonths,
         toggleSelectedMonth,
+        syncStatus,
         departments,
         companyGoals,
         departmentGoals,

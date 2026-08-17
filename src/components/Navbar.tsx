@@ -10,7 +10,11 @@ import {
   Calendar,
   Layers,
   HeartPulse,
-  RotateCcw
+  RotateCcw,
+  Cloud,
+  CheckCircle2,
+  RefreshCw,
+  AlertCircle
 } from 'lucide-react';
 
 interface NavbarProps {
@@ -25,6 +29,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, onOpenQ
     setSelectedCompany,
     selectedMonth,
     setSelectedMonth,
+    syncStatus,
     resetToDemoData
   } = useDashboard();
 
@@ -60,8 +65,34 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, onOpenQ
             </div>
           </div>
 
-          {/* Controls: Company Filter + Month Selector + Quick Add */}
+          {/* Controls: Live Sync Badge + Company Filter + Month Selector + Quick Add */}
           <div className="flex flex-wrap items-center gap-3">
+            {/* Live Cross-Device Sync Badge */}
+            <div className="hidden sm:flex items-center gap-1.5 bg-slate-950 px-2.5 py-1.5 rounded-lg border border-slate-800 text-xs">
+              {syncStatus === 'synced' && (
+                <>
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                  </span>
+                  <Cloud className="w-3.5 h-3.5 text-emerald-400 ml-0.5" />
+                  <span className="text-[11px] font-semibold text-emerald-400">Live Sync</span>
+                </>
+              )}
+              {syncStatus === 'syncing' && (
+                <>
+                  <RefreshCw className="w-3.5 h-3.5 text-blue-400 animate-spin" />
+                  <span className="text-[11px] font-semibold text-blue-400">Syncing...</span>
+                </>
+              )}
+              {syncStatus === 'error' && (
+                <>
+                  <AlertCircle className="w-3.5 h-3.5 text-amber-400" />
+                  <span className="text-[11px] font-semibold text-amber-400">Sync Error</span>
+                </>
+              )}
+            </div>
+
             {/* Company Selector Pills */}
             <div className="bg-slate-950 p-1 rounded-lg border border-slate-800 flex items-center gap-1">
               <button

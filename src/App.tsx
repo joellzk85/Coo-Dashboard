@@ -58,9 +58,9 @@ export function DashboardApp() {
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
           <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-2">
-              <div className="w-2 h-2 rounded-full bg-emerald-400"></div>
+              <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></div>
               <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
-                Executive Workspace • Local Storage Active
+                Executive Workspace • Cross-Device Cloud Sync Active
               </span>
             </div>
             <div className="h-3.5 w-px bg-slate-700 hidden sm:block"></div>
