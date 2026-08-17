@@ -237,7 +237,9 @@ export const DashboardRoadmap: React.FC = () => {
 
               {filteredCompanyGoals.map((cg) => {
                 const targetQ = getQuarterCol(cg.targetDate);
-                const progressPct = Math.round((cg.currentValue / cg.targetValue) * 100);
+                const cur = Math.max(0, Number(cg.currentValue) || 0);
+                const tar = Math.max(0, Number(cg.targetValue) || 0);
+                const progressPct = tar > 0 ? Math.max(0, Math.min(100, Math.round((cur / tar) * 100))) : 0;
 
                 return (
                   <div key={cg.id} className="bg-slate-900 text-white rounded-xl p-4 shadow-md border border-slate-800 space-y-3">
@@ -254,11 +256,11 @@ export const DashboardRoadmap: React.FC = () => {
                     {/* Progress Bar */}
                     <div className="space-y-1">
                       <div className="flex justify-between text-[11px] text-slate-300">
-                        <span>{cg.targetMetric}: {cg.currentValue} / {cg.targetValue} {cg.unit}</span>
+                        <span>{cg.targetMetric || 'Goal Metric'}: {cur} / {tar} {cg.unit || ''}</span>
                         <span className="font-bold text-blue-400">{progressPct}%</span>
                       </div>
                       <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
-                        <div className="bg-blue-500 h-full rounded-full" style={{ width: `${progressPct}%` }} />
+                        <div className="bg-blue-500 h-full rounded-full transition-all duration-500" style={{ width: `${progressPct}%` }} />
                       </div>
                     </div>
 

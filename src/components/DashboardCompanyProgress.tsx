@@ -128,10 +128,68 @@ export const DashboardCompanyProgress: React.FC<DashboardCompanyProgressProps> =
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {filteredCompanyGoals.map((cg) => {
             const isEnergy = cg.companyId === 'next_energy';
-            const progressPercent = Math.min(
-              100,
-              Math.round((cg.currentValue / cg.targetValue) * 100)
-            );
+            
+            // Safe Next Energy progress calculation
+            const targetVal = Math.max(0, Number(cg.targetValue) || 0);
+            const currentVal = Math.max(0, Number(cg.currentValue) || 0);
+            const progressPercent = targetVal > 0 
+              ? Math.max(0, Math.min(100, Math.round((currentVal / targetVal) * 100))) 
+              : 0;
+
+            // Safe Next Academy progress calculation
+            const revCurrent = Math.max(0, Number(cg.academyRevenueCurrent) || 0);
+            const revTarget = Math.max(0, Number(cg.academyRevenueTarget) || 0);
+            const revPercent = revTarget > 0 
+              ? Math.max(0, Math.min(100, Math.round((revCurrent / revTarget) * 100))) 
+              : 0;
+
+            const daysCurrent = Math.max(0, Number(cg.academyTrainingDaysCurrent) || 0);
+            const daysTarget = Math.max(0, Number(cg.academyTrainingDaysTarget) || 0);
+            const daysPercent = daysTarget > 0 
+              ? Math.max(0, Math.min(100, Math.round((daysCurrent / daysTarget) * 100))) 
+              : 0;
+
+            // Compute dynamic goal rating
+            const completedMilestones = cg.milestones.filter(m => m.completed).length;
+            const totalMilestones = cg.milestones.length;
+            const milestonePct = totalMilestones > 0 ? Math.round((completedMilestones / totalMilestones) * 100) : 0;
+
+            let computedPct = 0;
+            let hasGoalData = false;
+
+            if (isEnergy) {
+              hasGoalData = targetVal > 0 || totalMilestones > 0;
+              computedPct = targetVal > 0 
+                ? (totalMilestones > 0 ? Math.round(progressPercent * 0.7 + milestonePct * 0.3) : progressPercent)
+                : milestonePct;
+            } else {
+              hasGoalData = revTarget > 0 || daysTarget > 0 || totalMilestones > 0;
+              let metricsCount = 0;
+              let metricsSum = 0;
+              if (revTarget > 0) { metricsSum += revPercent; metricsCount++; }
+              if (daysTarget > 0) { metricsSum += daysPercent; metricsCount++; }
+              const metricsAvg = metricsCount > 0 ? metricsSum / metricsCount : 0;
+              computedPct = metricsCount > 0
+                ? (totalMilestones > 0 ? Math.round(metricsAvg * 0.7 + milestonePct * 0.3) : Math.round(metricsAvg))
+                : milestonePct;
+            }
+
+            let rating = 'F';
+            if (!hasGoalData && computedPct === 0) {
+              rating = 'N/A';
+            } else if (computedPct >= 90) {
+              rating = 'A+';
+            } else if (computedPct >= 75) {
+              rating = 'A';
+            } else if (computedPct >= 60) {
+              rating = 'B';
+            } else if (computedPct >= 45) {
+              rating = 'C';
+            } else if (computedPct >= 30) {
+              rating = 'D';
+            } else {
+              rating = 'F';
+            }
 
             return (
               <div
@@ -156,7 +214,15 @@ export const DashboardCompanyProgress: React.FC<DashboardCompanyProgressProps> =
                     {/* Rating Badge */}
                     <div className="flex items-center gap-1.5 bg-slate-50 px-3 py-1 rounded-lg border border-slate-200">
                       <span className="text-xs text-slate-500 font-semibold uppercase text-[10px]">Rating:</span>
-                      <span className="text-sm font-black text-blue-600">{cg.overallRating}</span>
+                      <span className={`text-sm font-black ${
+                        rating === 'A+' || rating === 'A' ? 'text-emerald-600' :
+                        rating === 'B' ? 'text-blue-600' :
+                        rating === 'C' ? 'text-amber-600' :
+                        rating === 'D' ? 'text-orange-600' :
+                        rating === 'F' ? 'text-rose-600' : 'text-slate-400'
+                      }`}>
+                        {rating}
+                      </span>
                     </div>
 
                     {/* Impact Level Badge */}
@@ -212,9 +278,9 @@ export const DashboardCompanyProgress: React.FC<DashboardCompanyProgressProps> =
                       <div className="flex justify-between text-xs">
                         <span className="text-slate-600 font-semibold">Revenue Target (RM):</span>
                         <span className="font-extrabold text-slate-900">
-                          RM {(cg.academyRevenueCurrent ?? 0).toLocaleString()} / RM {(cg.academyRevenueTarget ?? 1500000).toLocaleString()}
+                          RM {revCurrent.toLocaleString()} / RM {revTarget.toLocaleString()}
                           <span className="text-amber-700 ml-1 font-bold">
-                            ({Math.min(100, Math.round(((cg.academyRevenueCurrent ?? 0) / (cg.academyRevenueTarget ?? 1500000)) * 100))}% COMPLETE)
+                            ({revPercent}% COMPLETE)
                           </span>
                         </span>
                       </div>
@@ -222,7 +288,7 @@ export const DashboardCompanyProgress: React.FC<DashboardCompanyProgressProps> =
                         <div
                           className="bg-amber-600 h-full rounded-full transition-all duration-500"
                           style={{
-                            width: `${Math.min(100, Math.round(((cg.academyRevenueCurrent ?? 0) / (cg.academyRevenueTarget ?? 1500000)) * 100))}%`
+                            width: `${revPercent}%`
                           }}
                         />
                       </div>
@@ -233,9 +299,9 @@ export const DashboardCompanyProgress: React.FC<DashboardCompanyProgressProps> =
                       <div className="flex justify-between text-xs">
                         <span className="text-slate-600 font-semibold">Training Volume:</span>
                         <span className="font-extrabold text-slate-900">
-                          {cg.academyTrainingDaysCurrent ?? 0} / {cg.academyTrainingDaysTarget ?? 120} Days Conducted
+                          {daysCurrent} / {daysTarget} Days Conducted
                           <span className="text-emerald-700 ml-1 font-bold">
-                            ({Math.min(100, Math.round(((cg.academyTrainingDaysCurrent ?? 0) / (cg.academyTrainingDaysTarget ?? 120)) * 100))}% COMPLETE)
+                            ({daysPercent}% COMPLETE)
                           </span>
                         </span>
                       </div>
@@ -243,7 +309,7 @@ export const DashboardCompanyProgress: React.FC<DashboardCompanyProgressProps> =
                         <div
                           className="bg-emerald-600 h-full rounded-full transition-all duration-500"
                           style={{
-                            width: `${Math.min(100, Math.round(((cg.academyTrainingDaysCurrent ?? 0) / (cg.academyTrainingDaysTarget ?? 120)) * 100))}%`
+                            width: `${daysPercent}%`
                           }}
                         />
                       </div>
@@ -259,10 +325,10 @@ export const DashboardCompanyProgress: React.FC<DashboardCompanyProgressProps> =
                 ) : (
                   <div className="mt-5 bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
                     <div className="flex items-center justify-between text-xs">
-                      <span className="text-slate-500 font-semibold uppercase text-[10px] tracking-wider">{cg.targetMetric}</span>
+                      <span className="text-slate-500 font-semibold uppercase text-[10px] tracking-wider">{cg.targetMetric || 'Strategic Metric'}</span>
                       <div className="flex items-baseline gap-1 font-extrabold text-slate-900">
-                        <span className="text-blue-600 text-base">{cg.currentValue}</span>
-                        <span>/ {cg.targetValue} {cg.unit}</span>
+                        <span className="text-blue-600 text-base">{currentVal}</span>
+                        <span>/ {targetVal} {cg.unit || ''}</span>
                         <span className="text-xs text-blue-600 font-bold ml-1">({progressPercent}% COMPLETE)</span>
                       </div>
                     </div>
@@ -495,55 +561,61 @@ export const DashboardCompanyProgress: React.FC<DashboardCompanyProgressProps> =
                         <span>Next Academy Performance Metrics</span>
                       </div>
                       
-                      {dg.academyRevenueTarget ? (
-                        <div className="space-y-1">
-                          <div className="flex justify-between text-[11px]">
-                            <span className="text-slate-600 font-semibold">Revenue Target (RM):</span>
-                            <span className="font-bold text-slate-900">
-                              RM {(dg.academyRevenueCurrent ?? 0).toLocaleString()} / RM {dg.academyRevenueTarget.toLocaleString()}
-                              <span className="text-amber-700 ml-1 font-bold">
-                                ({Math.min(100, Math.round(((dg.academyRevenueCurrent ?? 0) / dg.academyRevenueTarget) * 100))}% COMPLETE)
+                      {dg.academyRevenueTarget !== undefined ? (() => {
+                        const dRevCur = Math.max(0, Number(dg.academyRevenueCurrent) || 0);
+                        const dRevTar = Math.max(0, Number(dg.academyRevenueTarget) || 0);
+                        const dRevPct = dRevTar > 0 ? Math.max(0, Math.min(100, Math.round((dRevCur / dRevTar) * 100))) : 0;
+                        return (
+                          <div className="space-y-1">
+                            <div className="flex justify-between text-[11px]">
+                              <span className="text-slate-600 font-semibold">Revenue Target (RM):</span>
+                              <span className="font-bold text-slate-900">
+                                RM {dRevCur.toLocaleString()} / RM {dRevTar.toLocaleString()}
+                                <span className="text-amber-700 ml-1 font-bold">
+                                  ({dRevPct}% COMPLETE)
+                                </span>
                               </span>
-                            </span>
+                            </div>
+                            <div className="w-full bg-amber-200/70 h-1.5 rounded-full overflow-hidden">
+                              <div
+                                className="bg-amber-600 h-full rounded-full transition-all duration-300"
+                                style={{ width: `${dRevPct}%` }}
+                              />
+                            </div>
                           </div>
-                          <div className="w-full bg-amber-200/70 h-1.5 rounded-full overflow-hidden">
-                            <div
-                              className="bg-amber-600 h-full rounded-full transition-all duration-300"
-                              style={{
-                                width: `${Math.min(100, Math.round(((dg.academyRevenueCurrent ?? 0) / dg.academyRevenueTarget) * 100))}%`
-                              }}
-                            />
-                          </div>
-                        </div>
-                      ) : null}
+                        );
+                      })() : null}
 
-                      {dg.academyTrainingDaysTarget ? (
-                        <div className="space-y-1">
-                          <div className="flex justify-between text-[11px]">
-                            <span className="text-slate-600 font-semibold">Training Volume:</span>
-                            <span className="font-bold text-slate-900">
-                              {dg.academyTrainingDaysCurrent ?? 0} / {dg.academyTrainingDaysTarget} Days Conducted
-                              <span className="text-emerald-700 ml-1 font-bold">
-                                ({Math.min(100, Math.round(((dg.academyTrainingDaysCurrent ?? 0) / dg.academyTrainingDaysTarget) * 100))}% COMPLETE)
+                      {dg.academyTrainingDaysTarget !== undefined ? (() => {
+                        const dDaysCur = Math.max(0, Number(dg.academyTrainingDaysCurrent) || 0);
+                        const dDaysTar = Math.max(0, Number(dg.academyTrainingDaysTarget) || 0);
+                        const dDaysPct = dDaysTar > 0 ? Math.max(0, Math.min(100, Math.round((dDaysCur / dDaysTar) * 100))) : 0;
+                        return (
+                          <div className="space-y-1">
+                            <div className="flex justify-between text-[11px]">
+                              <span className="text-slate-600 font-semibold">Training Volume:</span>
+                              <span className="font-bold text-slate-900">
+                                {dDaysCur} / {dDaysTar} Days Conducted
+                                <span className="text-emerald-700 ml-1 font-bold">
+                                  ({dDaysPct}% COMPLETE)
+                                </span>
                               </span>
-                            </span>
+                            </div>
+                            <div className="w-full bg-emerald-200/70 h-1.5 rounded-full overflow-hidden">
+                              <div
+                                className="bg-emerald-600 h-full rounded-full transition-all duration-300"
+                                style={{ width: `${dDaysPct}%` }}
+                              />
+                            </div>
                           </div>
-                          <div className="w-full bg-emerald-200/70 h-1.5 rounded-full overflow-hidden">
-                            <div
-                              className="bg-emerald-600 h-full rounded-full transition-all duration-300"
-                              style={{
-                                width: `${Math.min(100, Math.round(((dg.academyTrainingDaysCurrent ?? 0) / dg.academyTrainingDaysTarget) * 100))}%`
-                              }}
-                            />
-                          </div>
-                        </div>
-                      ) : null}
+                        );
+                      })() : null}
                     </div>
                   ) : (
                     <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-2">
                       <div className="flex items-center justify-between text-xs">
                         <span className="text-slate-500 font-medium">{dg.targetMetric}</span>
-                        <span className="font-extrabold text-slate-900">{dg.progressPercent}%</span>
+                        <span className="font-extrabold text-slate-900">{Math.max(0, Math.min(100, Number(dg.progressPercent) || 0))}%</span>
                       </div>
 
                       <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
@@ -557,7 +629,7 @@ export const DashboardCompanyProgress: React.FC<DashboardCompanyProgressProps> =
                               ? 'bg-rose-500'
                               : 'bg-blue-600'
                           }`}
-                          style={{ width: `${dg.progressPercent}%` }}
+                          style={{ width: `${Math.max(0, Math.min(100, Number(dg.progressPercent) || 0))}%` }}
                         />
                       </div>
                     </div>

@@ -780,15 +780,14 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       });
     });
 
-    const avgProgress = totalDeptWeights > 0 ? totalProgressWeighted / totalDeptWeights : 80;
+    const avgProgress = totalDeptWeights > 0 ? totalProgressWeighted / totalDeptWeights : 0;
     const deptMilestoneRate =
       totalDeptMilestonesWeighted > 0
         ? (completedDeptMilestonesWeighted / totalDeptMilestonesWeighted) * 100
-        : 80;
-    const opScore = Math.min(
-      25,
-      Math.max(0, Math.round(((avgProgress * 0.7 + deptMilestoneRate * 0.3) / 100) * 25))
-    );
+        : 0;
+    const opScore = totalDeptWeights > 0
+      ? Math.min(25, Math.max(0, Math.round(((avgProgress * 0.7 + deptMilestoneRate * 0.3) / 100) * 25)))
+      : 0;
 
     // 2. Team Leadership & 121 Cadence (Max 25 pts)
     const monthSessions = sessions121.filter(
@@ -801,11 +800,10 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     const avgEnergy =
       monthSessions.length > 0
         ? monthSessions.reduce((acc, s) => acc + s.energyRating, 0) / monthSessions.length
-        : 4.5;
-    const teamScore = Math.min(
-      25,
-      Math.max(0, Math.round(((cadenceExecutionPct * 0.8 + (avgEnergy / 5) * 20) / 100) * 25))
-    );
+        : 0;
+    const teamScore = monthSessions.length > 0
+      ? Math.min(25, Math.max(0, Math.round(((cadenceExecutionPct * 0.8 + (avgEnergy / 5) * 20) / 100) * 25)))
+      : 0;
 
     // 3. Strategic Growth & Projects (Max 25 pts)
     const monthActivities = activityLogs.filter((a) => a.date.startsWith(monthYear));
@@ -813,7 +811,7 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     const highImpactHours = monthActivities
       .filter((a) => a.impactTag === 'High Impact')
       .reduce((acc, a) => acc + a.hoursSpent, 0);
-    const highImpactRatio = totalHours > 0 ? (highImpactHours / totalHours) * 100 : 75;
+    const highImpactRatio = totalHours > 0 ? (highImpactHours / totalHours) * 100 : 0;
 
     const relevantCompanyGoals = companyGoals.filter(
       (cg) => selectedCompany === 'all' || cg.companyId === selectedCompany
@@ -828,20 +826,19 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       });
     });
     const cgMilestonePct =
-      totalCgMsWeighted > 0 ? (completedCgMsWeighted / totalCgMsWeighted) * 100 : 75;
-    const stratScore = Math.min(
-      25,
-      Math.max(0, Math.round(((highImpactRatio * 0.5 + cgMilestonePct * 0.5) / 100) * 25))
-    );
+      totalCgMsWeighted > 0 ? (completedCgMsWeighted / totalCgMsWeighted) * 100 : 0;
+    const stratScore = (totalHours > 0 || totalCgMsWeighted > 0)
+      ? Math.min(25, Math.max(0, Math.round(((highImpactRatio * 0.5 + cgMilestonePct * 0.5) / 100) * 25)))
+      : 0;
 
     // 4. Personal Mastery & Wellness (Max 25 pts)
     const monthWellness = wellnessLogs.filter((w) => w.date.startsWith(monthYear));
-    const wellnessLoggedDays = monthWellness.length;
-    const wellnessConsistencyPct = Math.min(100, (wellnessLoggedDays / 15) * 100);
+    const wellnessDaysLogged = monthWellness.length;
+    const wellnessConsistencyPct = Math.min(100, (wellnessDaysLogged / 15) * 100);
 
     const completedBooks = readingLogs.filter((b) => b.status === 'Completed').length;
     const totalBooks = readingLogs.length;
-    const readingPct = totalBooks > 0 ? (completedBooks / totalBooks) * 100 : 70;
+    const readingPct = totalBooks > 0 ? (completedBooks / totalBooks) * 100 : 0;
 
     let totalPersonalWeights = 0;
     let completedPersonalWeighted = 0;
@@ -853,17 +850,19 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     const personalGoalsPct =
       totalPersonalWeights > 0
         ? (completedPersonalWeighted / totalPersonalWeights) * 100
-        : 60;
+        : 0;
 
-    const masteryScore = Math.min(
-      25,
-      Math.max(
-        0,
-        Math.round(
-          ((wellnessConsistencyPct * 0.4 + readingPct * 0.3 + personalGoalsPct * 0.3) / 100) * 25
+    const masteryScore = (wellnessDaysLogged > 0 || totalBooks > 0 || totalPersonalWeights > 0)
+      ? Math.min(
+          25,
+          Math.max(
+            0,
+            Math.round(
+              ((wellnessConsistencyPct * 0.4 + readingPct * 0.3 + personalGoalsPct * 0.3) / 100) * 25
+            )
+          )
         )
-      )
-    );
+      : 0;
 
     const overallScore = opScore + teamScore + stratScore + masteryScore;
     let grade: 'A+' | 'A' | 'B' | 'C' | 'D' | 'F' = 'B';
@@ -921,24 +920,39 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
     const allSessions = sessions121.filter((s) => months.includes(s.monthYear));
     const completed121s = allSessions.filter((s) => s.status === 'Completed').length;
-    const avgEnergy = allSessions.length > 0 ? allSessions.reduce((a, b) => a + b.energyRating, 0) / allSessions.length : 4.6;
+    const avgEnergy = allSessions.length > 0 ? allSessions.reduce((a, b) => a + b.energyRating, 0) / allSessions.length : 0;
 
     const allActivities = activityLogs.filter((a) => months.some((m) => a.date.startsWith(m)));
     const totalHours = allActivities.reduce((a, b) => a + b.hoursSpent, 0);
     const highImpactHours = allActivities.filter((a) => a.impactTag === 'High Impact').reduce((a, b) => a + b.hoursSpent, 0);
-    const highImpactRatio = totalHours > 0 ? Math.round((highImpactHours / totalHours) * 100) : 75;
+    const highImpactRatio = totalHours > 0 ? Math.round((highImpactHours / totalHours) * 100) : 0;
 
     const allWellness = wellnessLogs.filter((w) => months.some((m) => w.date.startsWith(m)));
     const wellnessDaysLogged = allWellness.length;
     const targetWellnessDays = count * 15;
     const wellnessConsistencyPct = Math.min(100, Math.round((wellnessDaysLogged / targetWellnessDays) * 100));
 
+    // Dynamic aggregates
+    const allDeptMilestones = departmentGoals.flatMap((g) => g.milestones);
+    const completedDeptMilestones = allDeptMilestones.filter((m) => m.completed).length;
+    const deptMilestoneExecutionPct = allDeptMilestones.length > 0 ? Math.round((completedDeptMilestones / allDeptMilestones.length) * 100) : 0;
+
+    const allCompanyMilestones = companyGoals.flatMap((g) => g.milestones);
+    const completedCompanyMilestones = allCompanyMilestones.filter((m) => m.completed).length;
+    const companyGoalMilestonePct = allCompanyMilestones.length > 0 ? Math.round((completedCompanyMilestones / allCompanyMilestones.length) * 100) : 0;
+
+    const completedBooks = readingLogs.filter((b) => b.status === 'Completed').length;
+    const readingProgressPct = readingLogs.length > 0 ? Math.round((completedBooks / readingLogs.length) * 100) : 0;
+
+    const completedPersonal = personalGoalsAndBible.filter((p) => p.completed).length;
+    const personalGoalCompletionPct = personalGoalsAndBible.length > 0 ? Math.round((completedPersonal / personalGoalsAndBible.length) * 100) : 0;
+
     return {
       monthsEvaluated: months,
       operationalExcellence: {
         score: opAvg,
         weightedDeptGoalProgressPct: Math.round((opAvg / 25) * 100),
-        deptMilestoneExecutionPct: 82,
+        deptMilestoneExecutionPct,
         impactWeightsApplied: { highCount: highWeights, mediumCount: medWeights, lowCount: lowWeights },
         formulaText: `Score = Math.min(25, [(Weighted Goal Progress % × 0.7) + (Milestone Completion % × 0.3)] × 0.25). Impact Multipliers: High = 1.5x, Med = 1.0x, Low = 0.5x.`,
       },
@@ -952,15 +966,15 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       strategicGrowth: {
         score: stratAvg,
         highImpactHoursRatioPct: highImpactRatio,
-        companyGoalMilestonePct: 78,
+        companyGoalMilestonePct,
         formulaText: `Score = Math.min(25, [(High Impact Time % × 0.5) + (Company Goal Milestones % × 0.5)] × 0.25).`,
       },
       personalMastery: {
         score: masteryAvg,
         wellnessDaysLogged,
         wellnessConsistencyPct,
-        readingProgressPct: 75,
-        personalGoalCompletionPct: 65,
+        readingProgressPct,
+        personalGoalCompletionPct,
         formulaText: `Score = Math.min(25, [(Wellness Logged Days vs 15/mo target × 0.4) + (Reading Log Completion % × 0.3) + (Personal/Bible Goal Completion % × 0.3)] × 0.25).`,
       },
       monthlyScoresBreakdown: monthlyGrades.map((g) => ({
@@ -969,7 +983,7 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         grade: g.grade,
       })),
       overallCumulativeScore: cumulativeScore,
-      overallGrade,
+      overallGrade: cumulativeScore === 0 ? 'F' : overallGrade,
     };
   };
 
@@ -978,28 +992,28 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setSyncStatus('syncing');
     try {
       const cgSnap = await getDocs(collection(db, COLLECTIONS.companyGoals));
-      if (!cgSnap.empty) setCompanyGoals(cgSnap.docs.map((d) => d.data() as CompanyGoal));
+      setCompanyGoals(cgSnap.docs.map((d) => d.data() as CompanyGoal));
 
       const dgSnap = await getDocs(collection(db, COLLECTIONS.departmentGoals));
-      if (!dgSnap.empty) setDepartmentGoals(dgSnap.docs.map((d) => d.data() as DepartmentGoal));
+      setDepartmentGoals(dgSnap.docs.map((d) => d.data() as DepartmentGoal));
 
       const sSnap = await getDocs(collection(db, COLLECTIONS.sessions121));
-      if (!sSnap.empty) setSessions121(sSnap.docs.map((d) => d.data() as Session121));
+      setSessions121(sSnap.docs.map((d) => d.data() as Session121));
 
       const actSnap = await getDocs(collection(db, COLLECTIONS.activityLogs));
-      if (!actSnap.empty) setActivityLogs(actSnap.docs.map((d) => d.data() as ActivityImpactLog));
+      setActivityLogs(actSnap.docs.map((d) => d.data() as ActivityImpactLog));
 
       const refSnap = await getDocs(collection(db, COLLECTIONS.reflections));
-      if (!refSnap.empty) setReflections(refSnap.docs.map((d) => d.data() as COOLearningReflection));
+      setReflections(refSnap.docs.map((d) => d.data() as COOLearningReflection));
 
       const readSnap = await getDocs(collection(db, COLLECTIONS.readingLogs));
-      if (!readSnap.empty) setReadingLogs(readSnap.docs.map((d) => d.data() as ReadingLog));
+      setReadingLogs(readSnap.docs.map((d) => d.data() as ReadingLog));
 
       const pbSnap = await getDocs(collection(db, COLLECTIONS.personalGoalsAndBible));
-      if (!pbSnap.empty) setPersonalGoalsAndBible(pbSnap.docs.map((d) => d.data() as PersonalGoalAndBible));
+      setPersonalGoalsAndBible(pbSnap.docs.map((d) => d.data() as PersonalGoalAndBible));
 
       const wSnap = await getDocs(collection(db, COLLECTIONS.wellnessLogs));
-      if (!wSnap.empty) setWellnessLogs(wSnap.docs.map((d) => d.data() as WellnessLog));
+      setWellnessLogs(wSnap.docs.map((d) => d.data() as WellnessLog));
 
       setSyncStatus('synced');
       setLastSyncedAt(new Date());
