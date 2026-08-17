@@ -31,15 +31,42 @@ export const CloudSyncModal: React.FC<CloudSyncModalProps> = ({ isOpen, onClose 
     forceRefreshFromCloud,
     forcePushAllToCloud,
     testCloudConnection,
+    cleanSlateAllData,
+    resetToDemoData,
   } = useDashboard();
 
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isPushing, setIsPushing] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
+  const [isWiping, setIsWiping] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; latencyMs: number; message: string } | null>(null);
   const [actionNotice, setActionNotice] = useState<string | null>(null);
 
   if (!isOpen) return null;
+
+  const handleCleanSlate = async () => {
+    if (window.confirm('Are you sure you want to Clean Slate? This will wipe all goals, logs, and sessions from Cloud Firestore and set a fresh, empty workspace.')) {
+      setIsWiping(true);
+      setActionNotice(null);
+      const success = await cleanSlateAllData();
+      setIsWiping(false);
+      if (success) {
+        setActionNotice('Clean slate complete! All records have been cleared to a clean workspace.');
+      } else {
+        setActionNotice('Failed to wipe data. Please check connection.');
+      }
+    }
+  };
+
+  const handleResetDemo = async () => {
+    if (window.confirm('Reset all goals and records back to initial demo dataset?')) {
+      setIsWiping(true);
+      setActionNotice(null);
+      await resetToDemoData();
+      setIsWiping(false);
+      setActionNotice('Demo dataset loaded successfully.');
+    }
+  };
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -257,7 +284,7 @@ export const CloudSyncModal: React.FC<CloudSyncModalProps> = ({ isOpen, onClose 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
             <button
               onClick={handleRefresh}
-              disabled={isRefreshing}
+              disabled={isRefreshing || isWiping}
               className="w-full py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs flex items-center justify-center gap-2 border border-slate-700 transition-all active:scale-[0.98]"
             >
               <DownloadCloud className={`w-4 h-4 ${isRefreshing ? 'animate-bounce text-blue-400' : 'text-slate-400'}`} />
@@ -266,11 +293,30 @@ export const CloudSyncModal: React.FC<CloudSyncModalProps> = ({ isOpen, onClose 
 
             <button
               onClick={handlePush}
-              disabled={isPushing}
+              disabled={isPushing || isWiping}
               className="w-full py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-md active:scale-[0.98]"
             >
               <UploadCloud className={`w-4 h-4 ${isPushing ? 'animate-bounce' : ''}`} />
               {isPushing ? 'Pushing to Cloud...' : 'Force Push All to Cloud'}
+            </button>
+          </div>
+
+          {/* Database Workspace Actions */}
+          <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between gap-3">
+            <button
+              onClick={handleCleanSlate}
+              disabled={isWiping}
+              className="py-2 px-3 rounded-lg bg-red-950/30 hover:bg-red-900/50 border border-red-800/40 text-red-300 font-semibold text-xs transition-colors flex items-center gap-1.5"
+            >
+              {isWiping ? 'Wiping...' : '🧹 Clean Slate (Wipe All to Zero)'}
+            </button>
+
+            <button
+              onClick={handleResetDemo}
+              disabled={isWiping}
+              className="py-2 px-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs border border-slate-700 transition-colors"
+            >
+              🔄 Load Demo Seed Data
             </button>
           </div>
         </div>

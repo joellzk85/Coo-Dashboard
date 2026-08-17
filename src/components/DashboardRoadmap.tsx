@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useDashboard } from '../context/DashboardContext';
 import { CompanyGoal, DepartmentGoal } from '../types/dashboard';
+import { EditGoalModal } from './Modals/EditGoalModal';
 import {
   Calendar,
   Filter,
@@ -14,7 +15,9 @@ import {
   ChevronRight,
   Eye,
   SlidersHorizontal,
-  Sparkles
+  Sparkles,
+  Edit3,
+  Trash2,
 } from 'lucide-react';
 
 export const DashboardRoadmap: React.FC = () => {
@@ -24,7 +27,14 @@ export const DashboardRoadmap: React.FC = () => {
     selectedCompany,
     toggleCompanyMilestone,
     toggleDepartmentMilestone,
+    deleteCompanyGoal,
+    deleteDepartmentGoal,
   } = useDashboard();
+
+  const [editingGoal, setEditingGoal] = useState<{
+    type: 'company' | 'department';
+    data: CompanyGoal | DepartmentGoal;
+  } | null>(null);
 
   // Visibility Controls State
   const [showCompanyGoals, setShowCompanyGoals] = useState<boolean>(true);
@@ -261,41 +271,98 @@ export const DashboardRoadmap: React.FC = () => {
                 }
 
                 return (
-                  <div key={cg.id} className="bg-slate-900 text-white rounded-xl p-4 shadow-md border border-slate-800 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className={`text-white text-[10px] font-bold px-2 py-0.5 rounded uppercase ${
+                  <div key={cg.id} className="bg-slate-900 text-white rounded-xl p-5 shadow-lg border border-slate-800 space-y-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2.5">
+                        <span className={`text-white text-[10px] font-extrabold px-2.5 py-1 rounded-md uppercase tracking-wider flex items-center gap-1 ${
                           isAcademy ? 'bg-emerald-600' : 'bg-blue-600'
                         }`}>
+                          {isAcademy ? <GraduationCap className="w-3 h-3" /> : <Zap className="w-3 h-3" />}
                           {isAcademy ? 'Next Academy' : 'Next Energy'}
                         </span>
-                        <h4 className="text-sm font-bold">{cg.title}</h4>
+                        <h4 className="text-sm font-bold text-slate-100">{cg.title}</h4>
                       </div>
-                      <span className="text-xs font-bold text-blue-400">Target: {targetQ} ({cg.targetDate})</span>
+
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-blue-400 bg-slate-800/80 px-2.5 py-1 rounded-lg border border-slate-700">
+                          Target: {targetQ} ({cg.targetDate})
+                        </span>
+                        <button
+                          onClick={() => setEditingGoal({ type: 'company', data: cg })}
+                          className="p-1 text-slate-400 hover:text-blue-400 hover:bg-slate-800 rounded transition-colors"
+                          title="Edit Goal"
+                        >
+                          <Edit3 className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (window.confirm('Delete this Company Goal?')) deleteCompanyGoal(cg.id);
+                          }}
+                          className="p-1 text-slate-400 hover:text-rose-400 hover:bg-slate-800 rounded transition-colors"
+                          title="Delete Goal"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </div>
 
-                    {/* Progress Bar */}
-                    <div className="space-y-1">
-                      {isAcademy && (revTar > 0 || daysTar > 0) ? (
-                        <div className="flex justify-between text-[11px] text-slate-300">
-                          <span>
-                            Rev: RM {revCur.toLocaleString()} / RM {revTar.toLocaleString()} ({revPct}%) • Volume: {daysCur} / {daysTar} Days ({daysPct}%)
-                          </span>
-                          <span className="font-bold text-emerald-400">{progressPct}%</span>
+                    {/* Progress Bars */}
+                    {isAcademy && (revTar > 0 || daysTar > 0) ? (
+                      <div className="space-y-3 bg-slate-950/70 p-3.5 rounded-xl border border-slate-800/80">
+                        {/* Revenue Bar */}
+                        <div className="space-y-1">
+                          <div className="flex justify-between text-[11px]">
+                            <span className="text-amber-300 font-semibold flex items-center gap-1">
+                              <span>💰 Revenue Target:</span>
+                              <span className="text-slate-300 font-normal">RM {revCur.toLocaleString()} / RM {revTar.toLocaleString()}</span>
+                            </span>
+                            <span className="font-extrabold text-amber-400">{revPct}%</span>
+                          </div>
+                          <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+                            <div
+                              className="bg-amber-500 h-full rounded-full transition-all duration-500"
+                              style={{ width: `${revPct}%` }}
+                            />
+                          </div>
                         </div>
-                      ) : (
+
+                        {/* Training Days Volume Bar */}
+                        <div className="space-y-1">
+                          <div className="flex justify-between text-[11px]">
+                            <span className="text-emerald-300 font-semibold flex items-center gap-1">
+                              <span>📚 Training Volume:</span>
+                              <span className="text-slate-300 font-normal">{daysCur} / {daysTar} Days</span>
+                            </span>
+                            <span className="font-extrabold text-emerald-400">{daysPct}%</span>
+                          </div>
+                          <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+                            <div
+                              className="bg-emerald-500 h-full rounded-full transition-all duration-500"
+                              style={{ width: `${daysPct}%` }}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Combined Overall */}
+                        <div className="flex justify-between items-center text-[10px] text-slate-400 pt-1 border-t border-slate-800">
+                          <span>Overall Academy Macro Completion</span>
+                          <span className="font-bold text-slate-200">{progressPct}% Complete</span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-1.5">
                         <div className="flex justify-between text-[11px] text-slate-300">
                           <span>{cg.targetMetric || 'Goal Metric'}: {cur} / {tar} {cg.unit || ''}</span>
                           <span className="font-bold text-blue-400">{progressPct}%</span>
                         </div>
-                      )}
-                      <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
-                        <div
-                          className={`h-full rounded-full transition-all duration-500 ${isAcademy ? 'bg-emerald-500' : 'bg-blue-500'}`}
-                          style={{ width: `${progressPct}%` }}
-                        />
+                        <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+                          <div
+                            className={`h-full rounded-full transition-all duration-500 ${isAcademy ? 'bg-emerald-500' : 'bg-blue-500'}`}
+                            style={{ width: `${progressPct}%` }}
+                          />
+                        </div>
                       </div>
-                    </div>
+                    )}
 
                     {/* Milestones inside roadmap card */}
                     {showMilestones && (
@@ -304,7 +371,7 @@ export const DashboardRoadmap: React.FC = () => {
                           <div
                             key={m.id}
                             onClick={() => toggleCompanyMilestone(cg.id, m.id)}
-                            className="flex items-center gap-2 text-xs bg-slate-950 p-2 rounded-lg border border-slate-800 cursor-pointer hover:border-slate-700"
+                            className="flex items-center gap-2 text-xs bg-slate-950 p-2.5 rounded-lg border border-slate-800 cursor-pointer hover:border-slate-700 transition-colors"
                           >
                             <input
                               type="checkbox"
@@ -362,6 +429,22 @@ export const DashboardRoadmap: React.FC = () => {
                           <span className="text-xs font-bold text-slate-600 bg-white px-2 py-0.5 rounded border border-slate-200">
                             Deadline: {targetQ} ({dg.targetDate})
                           </span>
+                          <button
+                            onClick={() => setEditingGoal({ type: 'department', data: dg })}
+                            className="p-1 text-slate-400 hover:text-blue-600 hover:bg-slate-200/60 rounded transition-colors"
+                            title="Edit Goal"
+                          >
+                            <Edit3 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => {
+                              if (window.confirm('Delete this Department Goal?')) deleteDepartmentGoal(dg.id);
+                            }}
+                            className="p-1 text-slate-400 hover:text-rose-600 hover:bg-slate-200/60 rounded transition-colors"
+                            title="Delete Goal"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
                         </div>
                       </div>
 
@@ -418,6 +501,15 @@ export const DashboardRoadmap: React.FC = () => {
           )}
         </div>
       </div>
+      {/* Edit Goal Modal */}
+      {editingGoal && (
+        <EditGoalModal
+          isOpen={!!editingGoal}
+          onClose={() => setEditingGoal(null)}
+          goalType={editingGoal.type}
+          goalData={editingGoal.data}
+        />
+      )}
     </div>
   );
 };

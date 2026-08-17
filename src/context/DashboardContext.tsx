@@ -158,6 +158,7 @@ interface DashboardContextType {
   forcePushAllToCloud: () => Promise<boolean>;
   testCloudConnection: () => Promise<{ success: boolean; latencyMs: number; message: string }>;
   resetToDemoData: () => Promise<void>;
+  cleanSlateAllData: () => Promise<boolean>;
   exportDataJSON: () => string;
   importDataJSON: (jsonStr: string) => Promise<boolean>;
 }
@@ -225,52 +226,61 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setSyncStatus('syncing');
     const unsubs: Array<() => void> = [];
 
-    // Seed initial cloud data directly to Firestore if collections are empty
+    // Seed initial cloud data directly to Firestore if collections are empty and not clean slated
     const ensureCloudSeeded = async () => {
       try {
         const metaRef = doc(db, COLLECTIONS.system, 'metadata');
         const metaSnap = await getDoc(metaRef);
         
-        if (!metaSnap.exists()) {
-          const checkSnap = await getDocs(collection(db, COLLECTIONS.companyGoals));
-          if (checkSnap.empty) {
-            console.log('Seeding initial executive dashboard data directly to Cloud Firestore...');
-            const batch = writeBatch(db);
-            
-            INITIAL_COMPANY_GOALS.forEach((g) => {
-              batch.set(doc(db, COLLECTIONS.companyGoals, g.id), cleanObject(g));
-            });
-            INITIAL_DEPARTMENT_GOALS.forEach((g) => {
-              batch.set(doc(db, COLLECTIONS.departmentGoals, g.id), cleanObject(g));
-            });
-            INITIAL_121_SESSIONS.forEach((s) => {
-              batch.set(doc(db, COLLECTIONS.sessions121, s.id), cleanObject(s));
-            });
-            INITIAL_ACTIVITY_LOGS.forEach((a) => {
-              batch.set(doc(db, COLLECTIONS.activityLogs, a.id), cleanObject(a));
-            });
-            INITIAL_REFLECTIONS.forEach((r) => {
-              batch.set(doc(db, COLLECTIONS.reflections, r.id), cleanObject(r));
-            });
-            INITIAL_READING_LOGS.forEach((b) => {
-              batch.set(doc(db, COLLECTIONS.readingLogs, b.id), cleanObject(b));
-            });
-            INITIAL_PERSONAL_AND_BIBLE.forEach((p) => {
-              batch.set(doc(db, COLLECTIONS.personalGoalsAndBible, p.id), cleanObject(p));
-            });
-            INITIAL_WELLNESS_LOGS.forEach((w) => {
-              batch.set(doc(db, COLLECTIONS.wellnessLogs, w.id), cleanObject(w));
-            });
+        // If metadata exists, respect whatever state the database is in (do not re-seed over user changes or clean slates)
+        if (metaSnap.exists()) {
+          return;
+        }
 
-            batch.set(metaRef, {
-              isInitialized: true,
-              initializedAt: new Date().toISOString(),
-              version: '1.0.0',
-            });
+        const checkSnap = await getDocs(collection(db, COLLECTIONS.companyGoals));
+        if (checkSnap.empty) {
+          console.log('Seeding initial executive dashboard data directly to Cloud Firestore...');
+          const batch = writeBatch(db);
+          
+          INITIAL_COMPANY_GOALS.forEach((g) => {
+            batch.set(doc(db, COLLECTIONS.companyGoals, g.id), cleanObject(g));
+          });
+          INITIAL_DEPARTMENT_GOALS.forEach((g) => {
+            batch.set(doc(db, COLLECTIONS.departmentGoals, g.id), cleanObject(g));
+          });
+          INITIAL_121_SESSIONS.forEach((s) => {
+            batch.set(doc(db, COLLECTIONS.sessions121, s.id), cleanObject(s));
+          });
+          INITIAL_ACTIVITY_LOGS.forEach((a) => {
+            batch.set(doc(db, COLLECTIONS.activityLogs, a.id), cleanObject(a));
+          });
+          INITIAL_REFLECTIONS.forEach((r) => {
+            batch.set(doc(db, COLLECTIONS.reflections, r.id), cleanObject(r));
+          });
+          INITIAL_READING_LOGS.forEach((b) => {
+            batch.set(doc(db, COLLECTIONS.readingLogs, b.id), cleanObject(b));
+          });
+          INITIAL_PERSONAL_AND_BIBLE.forEach((p) => {
+            batch.set(doc(db, COLLECTIONS.personalGoalsAndBible, p.id), cleanObject(p));
+          });
+          INITIAL_WELLNESS_LOGS.forEach((w) => {
+            batch.set(doc(db, COLLECTIONS.wellnessLogs, w.id), cleanObject(w));
+          });
 
-            await batch.commit();
-            console.log('Direct Cloud Firestore seed completed.');
-          }
+          batch.set(metaRef, {
+            isInitialized: true,
+            initializedAt: new Date().toISOString(),
+            version: '1.0.0',
+          });
+
+          await batch.commit();
+          console.log('Direct Cloud Firestore seed completed.');
+        } else {
+          await setDoc(metaRef, {
+            isInitialized: true,
+            initializedAt: new Date().toISOString(),
+            version: '1.0.0',
+          });
         }
       } catch (err: any) {
         console.warn('Cloud seed check warning:', err);
@@ -1124,6 +1134,60 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     }
   };
 
+  // Clean Slate: completely wipe all data to zero / empty state in Cloud Firestore
+  const cleanSlateAllData = async (): Promise<boolean> => {
+    setSyncStatus('syncing');
+    try {
+      const batch = writeBatch(db);
+
+      const collectionsToClear = [
+        COLLECTIONS.companyGoals,
+        COLLECTIONS.departmentGoals,
+        COLLECTIONS.sessions121,
+        COLLECTIONS.activityLogs,
+        COLLECTIONS.reflections,
+        COLLECTIONS.readingLogs,
+        COLLECTIONS.personalGoalsAndBible,
+        COLLECTIONS.wellnessLogs,
+      ];
+
+      for (const colName of collectionsToClear) {
+        const snap = await getDocs(collection(db, colName));
+        snap.docs.forEach((d) => {
+          batch.delete(d.ref);
+        });
+      }
+
+      batch.set(doc(db, COLLECTIONS.system, 'metadata'), {
+        isInitialized: true,
+        isCleanSlated: true,
+        cleanSlatedAt: new Date().toISOString(),
+        version: '1.0.0',
+      });
+
+      await batch.commit();
+
+      setCompanyGoals([]);
+      setDepartmentGoals([]);
+      setSessions121([]);
+      setActivityLogs([]);
+      setReflections([]);
+      setReadingLogs([]);
+      setPersonalGoalsAndBible([]);
+      setWellnessLogs([]);
+
+      setSyncStatus('synced');
+      setLastSyncedAt(new Date());
+      setSyncError(null);
+      return true;
+    } catch (err: any) {
+      console.error('Error clean slating data:', err);
+      setSyncStatus('error');
+      setSyncError(err.message || 'Failed to clean slate data');
+      return false;
+    }
+  };
+
   const exportDataJSON = () => {
     const data = {
       companyGoals,
@@ -1274,6 +1338,7 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         forcePushAllToCloud,
         testCloudConnection,
         resetToDemoData,
+        cleanSlateAllData,
         exportDataJSON,
         importDataJSON,
       }}
