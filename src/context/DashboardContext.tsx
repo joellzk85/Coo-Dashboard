@@ -199,19 +199,6 @@ const COLLECTIONS = {
   system: 'coo_system',
 } as const;
 
-// Cache loader helper to prevent white flash on device wake/reload
-function loadFromCache<T>(key: string, fallback: T): T {
-  try {
-    const item = localStorage.getItem(`coo_cache_${key}`);
-    if (item) {
-      return JSON.parse(item);
-    }
-  } catch (e) {
-    // ignore
-  }
-  return fallback;
-}
-
 const DashboardContext = createContext<DashboardContextType | undefined>(undefined);
 
 export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -223,32 +210,31 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [syncError, setSyncError] = useState<string | null>(null);
 
   const [departments] = useState<Department[]>(INITIAL_DEPARTMENTS);
-  const [companyGoals, setCompanyGoals] = useState<CompanyGoal[]>(() => loadFromCache('companyGoals', INITIAL_COMPANY_GOALS));
-  const [departmentGoals, setDepartmentGoals] = useState<DepartmentGoal[]>(() => loadFromCache('departmentGoals', INITIAL_DEPARTMENT_GOALS));
-  const [sessions121, setSessions121] = useState<Session121[]>(() => loadFromCache('sessions121', INITIAL_121_SESSIONS));
+  const [companyGoals, setCompanyGoals] = useState<CompanyGoal[]>(INITIAL_COMPANY_GOALS);
+  const [departmentGoals, setDepartmentGoals] = useState<DepartmentGoal[]>(INITIAL_DEPARTMENT_GOALS);
+  const [sessions121, setSessions121] = useState<Session121[]>(INITIAL_121_SESSIONS);
   const [kpiGrades] = useState<MonthlyKPIGrade[]>(INITIAL_KPI_GRADES);
-  const [activityLogs, setActivityLogs] = useState<ActivityImpactLog[]>(() => loadFromCache('activityLogs', INITIAL_ACTIVITY_LOGS));
-  const [reflections, setReflections] = useState<COOLearningReflection[]>(() => loadFromCache('reflections', INITIAL_REFLECTIONS));
-  const [readingLogs, setReadingLogs] = useState<ReadingLog[]>(() => loadFromCache('readingLogs', INITIAL_READING_LOGS));
-  const [personalGoalsAndBible, setPersonalGoalsAndBible] = useState<PersonalGoalAndBible[]>(() => loadFromCache('personalGoalsAndBible', INITIAL_PERSONAL_AND_BIBLE));
-  const [wellnessLogs, setWellnessLogs] = useState<WellnessLog[]>(() => loadFromCache('wellnessLogs', INITIAL_WELLNESS_LOGS));
+  const [activityLogs, setActivityLogs] = useState<ActivityImpactLog[]>(INITIAL_ACTIVITY_LOGS);
+  const [reflections, setReflections] = useState<COOLearningReflection[]>(INITIAL_REFLECTIONS);
+  const [readingLogs, setReadingLogs] = useState<ReadingLog[]>(INITIAL_READING_LOGS);
+  const [personalGoalsAndBible, setPersonalGoalsAndBible] = useState<PersonalGoalAndBible[]>(INITIAL_PERSONAL_AND_BIBLE);
+  const [wellnessLogs, setWellnessLogs] = useState<WellnessLog[]>(INITIAL_WELLNESS_LOGS);
 
-  // Multi-Device Cloud Real-Time Listeners & Auto-Seeder
+  // Direct Cloud Firestore Real-Time Listeners & Auto-Seeder
   useEffect(() => {
     setSyncStatus('syncing');
     const unsubs: Array<() => void> = [];
 
-    // Helper to seed initial cloud data if Firestore database is empty
+    // Seed initial cloud data directly to Firestore if collections are empty
     const ensureCloudSeeded = async () => {
       try {
         const metaRef = doc(db, COLLECTIONS.system, 'metadata');
         const metaSnap = await getDoc(metaRef);
         
         if (!metaSnap.exists()) {
-          // Check if companyGoals has any items
           const checkSnap = await getDocs(collection(db, COLLECTIONS.companyGoals));
           if (checkSnap.empty) {
-            console.log('Seeding initial executive dashboard data to cloud Firestore...');
+            console.log('Seeding initial executive dashboard data directly to Cloud Firestore...');
             const batch = writeBatch(db);
             
             INITIAL_COMPANY_GOALS.forEach((g) => {
@@ -283,11 +269,11 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             });
 
             await batch.commit();
-            console.log('Initial cloud seed completed successfully.');
+            console.log('Direct Cloud Firestore seed completed.');
           }
         }
       } catch (err: any) {
-        console.warn('Initial cloud seed check:', err);
+        console.warn('Cloud seed check warning:', err);
       }
     };
 
@@ -295,28 +281,20 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
     const setupListener = <T extends { id: string }>(
       colName: string,
-      cacheKey: string,
       setState: React.Dispatch<React.SetStateAction<T[]>>
     ) => {
       const colRef = collection(db, colName);
       const unsub = onSnapshot(
         colRef,
         (snapshot) => {
-          if (!snapshot.empty) {
-            const items = snapshot.docs.map((d) => d.data() as T);
-            setState(items);
-            try {
-              localStorage.setItem(`coo_cache_${cacheKey}`, JSON.stringify(items));
-            } catch (e) {
-              // ignore
-            }
-          }
+          const items = snapshot.docs.map((d) => d.data() as T);
+          setState(items);
           setSyncStatus('synced');
           setLastSyncedAt(new Date());
           setSyncError(null);
         },
         (err) => {
-          console.error(`Firestore snapshot error on ${colName}:`, err);
+          console.error(`Firestore real-time sync error on ${colName}:`, err);
           setSyncStatus('error');
           setSyncError(err.message || `Failed to sync ${colName}`);
         }
@@ -324,14 +302,14 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       unsubs.push(unsub);
     };
 
-    setupListener(COLLECTIONS.companyGoals, 'companyGoals', setCompanyGoals);
-    setupListener(COLLECTIONS.departmentGoals, 'departmentGoals', setDepartmentGoals);
-    setupListener(COLLECTIONS.sessions121, 'sessions121', setSessions121);
-    setupListener(COLLECTIONS.activityLogs, 'activityLogs', setActivityLogs);
-    setupListener(COLLECTIONS.reflections, 'reflections', setReflections);
-    setupListener(COLLECTIONS.readingLogs, 'readingLogs', setReadingLogs);
-    setupListener(COLLECTIONS.personalGoalsAndBible, 'personalGoalsAndBible', setPersonalGoalsAndBible);
-    setupListener(COLLECTIONS.wellnessLogs, 'wellnessLogs', setWellnessLogs);
+    setupListener(COLLECTIONS.companyGoals, setCompanyGoals);
+    setupListener(COLLECTIONS.departmentGoals, setDepartmentGoals);
+    setupListener(COLLECTIONS.sessions121, setSessions121);
+    setupListener(COLLECTIONS.activityLogs, setActivityLogs);
+    setupListener(COLLECTIONS.reflections, setReflections);
+    setupListener(COLLECTIONS.readingLogs, setReadingLogs);
+    setupListener(COLLECTIONS.personalGoalsAndBible, setPersonalGoalsAndBible);
+    setupListener(COLLECTIONS.wellnessLogs, setWellnessLogs);
 
     return () => {
       unsubs.forEach((unsub) => unsub());
