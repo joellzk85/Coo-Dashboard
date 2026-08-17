@@ -1,8 +1,87 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // Global Safety Net
     match /{document=**} {
-      allow read, write, delete: if true;
+      allow read, write: if false;
+    }
+
+    // COO Dashboard — shared collections (no login)
+    match /coo_company_goals/{document} {
+      allow read, write: if true;
+    }
+    match /coo_department_goals/{document} {
+      allow read, write: if true;
+    }
+    match /coo_sessions_121/{document} {
+      allow read, write: if true;
+    }
+    match /coo_activity_logs/{document} {
+      allow read, write: if true;
+    }
+    match /coo_reflections/{document} {
+      allow read, write: if true;
+    }
+    match /coo_reading_logs/{document} {
+      allow read, write: if true;
+    }
+    match /coo_personal_bible/{document} {
+      allow read, write: if true;
+    }
+    match /coo_wellness_logs/{document} {
+      allow read, write: if true;
+    }
+    match /coo_system/{document} {
+      allow read, write: if true;
+    }
+
+    // KPI Overrides Collection
+    match /kpi_overrides/{overrideId} {
+      allow read: if true;
+      allow create, update: if true 
+        && request.resource.data.repName is string
+        && request.resource.data.repName.size() <= 100
+        && request.resource.data.monthKey is string
+        && request.resource.data.monthKey.size() <= 20
+        && (request.resource.data.metricIndex is int || request.resource.data.metricIndex is float)
+        && (request.resource.data.weekIndex is int || request.resource.data.weekIndex is float)
+        && (request.resource.data.value == null || request.resource.data.value is int || request.resource.data.value is float);
+      allow delete: if true;
+    }
+    // Rep Mappings Collection
+    match /rep_mappings/{mappingId} {
+      allow read: if true;
+      allow create, update: if true 
+        && request.resource.data.email is string
+        && request.resource.data.repName is string;
+      allow delete: if true;
+    }
+    // App Settings Collection
+    match /app_settings/{settingId} {
+      allow read: if true;
+      allow create, update: if true
+        && request.resource.data.repPasswords is map
+        && request.resource.data.managementPassword is string
+        && request.resource.data.managementPassword.size() <= 100
+        && request.resource.data.repNames is list
+        && request.resource.data.updatedAt is string;
+      allow delete: if true;
+    }
+    // AI Comments Collection
+    match /ai_comments/{commentId} {
+      allow read, write: if true;
+    }
+    // Commission Requests Collection
+    match /commission_requests/{requestId} {
+      allow read, write: if true;
+    }
+    // Weekly Feedback Collection
+    match /weekly_feedback/{feedbackId} {
+      allow read, write: if true;
+    }
+    // Overrides Backups Collection
+    match /overrides_backups/{backupId} {
+      allow read, write: if true;
     }
   }
 }
