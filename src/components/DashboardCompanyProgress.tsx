@@ -21,10 +21,14 @@ import {
 } from 'lucide-react';
 
 interface DashboardCompanyProgressProps {
-  onOpenAddGoal: () => void;
+  onOpenAddCompanyGoal: () => void;
+  onOpenAddDeptGoal: () => void;
 }
 
-export const DashboardCompanyProgress: React.FC<DashboardCompanyProgressProps> = ({ onOpenAddGoal }) => {
+export const DashboardCompanyProgress: React.FC<DashboardCompanyProgressProps> = ({
+  onOpenAddCompanyGoal,
+  onOpenAddDeptGoal,
+}) => {
   const {
     selectedCompany,
     companyGoals,
@@ -90,7 +94,7 @@ export const DashboardCompanyProgress: React.FC<DashboardCompanyProgressProps> =
     <div className="space-y-8">
       {/* 1. Executive Summary & Company Big Goal Section */}
       <section className="space-y-4">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
               <Building2 className="w-5 h-5 text-blue-600" />
@@ -100,6 +104,14 @@ export const DashboardCompanyProgress: React.FC<DashboardCompanyProgressProps> =
               Macro-level strategic objectives for Next Energy & Next Academy. Click edit to dynamically modify goals or add deliverables.
             </p>
           </div>
+
+          <button
+            onClick={onOpenAddCompanyGoal}
+            className="bg-blue-600 hover:bg-blue-500 text-white font-bold px-4 py-2 rounded-xl text-xs flex items-center gap-2 transition-all shadow-sm self-start sm:self-auto cursor-pointer"
+          >
+            <Plus className="w-4 h-4 stroke-[2.5]" />
+            <span>Add Company Big Goal</span>
+          </button>
         </div>
 
         {filteredCompanyGoals.length === 0 ? (
@@ -111,7 +123,7 @@ export const DashboardCompanyProgress: React.FC<DashboardCompanyProgressProps> =
             </p>
             <div className="flex items-center justify-center gap-3 pt-2">
               <button
-                onClick={onOpenAddGoal}
+                onClick={onOpenAddCompanyGoal}
                 className="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold hover:bg-blue-700 transition-colors flex items-center gap-1.5 cursor-pointer shadow-sm"
               >
                 <Plus className="w-4 h-4" /> Add Big Goal
@@ -460,7 +472,7 @@ export const DashboardCompanyProgress: React.FC<DashboardCompanyProgressProps> =
           </div>
 
           <button
-            onClick={onOpenAddGoal}
+            onClick={onOpenAddDeptGoal}
             className="bg-blue-600 hover:bg-blue-500 text-white font-bold px-4 py-2 rounded-xl text-xs flex items-center gap-2 transition-all shadow-sm self-start sm:self-auto"
           >
             <Plus className="w-4 h-4 stroke-[2.5]" />
@@ -477,7 +489,7 @@ export const DashboardCompanyProgress: React.FC<DashboardCompanyProgressProps> =
             </p>
             <div className="flex items-center justify-center gap-3 pt-2">
               <button
-                onClick={onOpenAddGoal}
+                onClick={onOpenAddDeptGoal}
                 className="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold hover:bg-blue-700 transition-colors flex items-center gap-1.5 cursor-pointer shadow-sm"
               >
                 <Plus className="w-4 h-4" /> Add Department Goal

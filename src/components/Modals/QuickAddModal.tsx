@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useDashboard } from '../../context/DashboardContext';
-import { CompanyId, ActivityCategory } from '../../types/dashboard';
+import { CompanyId, ActivityCategory, GoalImpactLevel } from '../../types/dashboard';
 import {
   X,
   Users,
@@ -11,18 +11,23 @@ import {
   Heart,
   Plus,
   Trash2,
-  Check
+  Check,
+  Building2,
+  GraduationCap,
+  Sparkles,
+  Target
 } from 'lucide-react';
 
 interface QuickAddModalProps {
   isOpen: boolean;
-  type: '121' | 'deptGoal' | 'activity' | 'journal' | 'book' | 'personalBible' | null;
+  type: 'companyGoal' | 'deptGoal' | '121' | 'activity' | 'journal' | 'book' | 'personalBible' | null;
   onClose: () => void;
 }
 
 export const QuickAddModal: React.FC<QuickAddModalProps> = ({ isOpen, type, onClose }) => {
   const {
     departments,
+    addCompanyGoal,
     add121Session,
     addDepartmentGoal,
     addActivityLog,
@@ -30,6 +35,33 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({ isOpen, type, onCl
     addReadingLog,
     addPersonalGoalOrBible
   } = useDashboard();
+
+  // Mode switcher for Goal Creation (Company Big Goal vs Department Goal)
+  const [goalMode, setGoalMode] = useState<'company' | 'department'>('company');
+
+  useEffect(() => {
+    if (type === 'companyGoal') {
+      setGoalMode('company');
+    } else if (type === 'deptGoal') {
+      setGoalMode('department');
+    }
+  }, [type]);
+
+  // Form states for Company Big Goal
+  const [cgCompany, setCgCompany] = useState<CompanyId>('next_energy');
+  const [cgTitle, setCgTitle] = useState('');
+  const [cgDesc, setCgDesc] = useState('');
+  const [cgImpactLevel, setCgImpactLevel] = useState<GoalImpactLevel>('High');
+  const [cgTargetMetric, setCgTargetMetric] = useState('RM 20M Pipeline Value');
+  const [cgCurrentVal, setCgCurrentVal] = useState<string>('0');
+  const [cgTargetVal, setCgTargetVal] = useState<string>('20');
+  const [cgUnit, setCgUnit] = useState<string>('RM Million');
+  const [cgAcademyRevCurrent, setCgAcademyRevCurrent] = useState<string>('0');
+  const [cgAcademyRevTarget, setCgAcademyRevTarget] = useState<string>('1000000');
+  const [cgAcademyDaysCurrent, setCgAcademyDaysCurrent] = useState<string>('0');
+  const [cgAcademyDaysTarget, setCgAcademyDaysTarget] = useState<string>('40');
+  const [cgTargetDate, setCgTargetDate] = useState(new Date().toISOString().split('T')[0]);
+  const [cgMilestones, setCgMilestones] = useState<string[]>(['']);
 
   // Form states for 121
   const [selectedDeptId, setSelectedDeptId] = useState(departments[0]?.id || '');
@@ -96,6 +128,37 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({ isOpen, type, onCl
       setSessionCompany(d.companyId);
       setSessionCadence(d.cadenceRequired);
     }
+  };
+
+  const handleSubmitCompanyGoal = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!cgTitle.trim()) return;
+
+    const isAcademy = cgCompany === 'next_academy';
+
+    await addCompanyGoal({
+      companyId: cgCompany,
+      title: cgTitle.trim(),
+      description: cgDesc.trim(),
+      targetMetric: isAcademy ? 'Revenue & Training Days' : (cgTargetMetric.trim() || 'Contract Value'),
+      currentValue: isAcademy ? 0 : (Number(cgCurrentVal) || 0),
+      targetValue: isAcademy ? 100 : (Number(cgTargetVal) || 100),
+      unit: isAcademy ? 'RM / Days' : (cgUnit.trim() || ''),
+      targetDate: cgTargetDate,
+      overallRating: 'B',
+      impactLevel: cgImpactLevel,
+      ...(isAcademy ? {
+        academyRevenueCurrent: Number(cgAcademyRevCurrent) || 0,
+        academyRevenueTarget: Number(cgAcademyRevTarget) || 1000000,
+        academyTrainingDaysCurrent: Number(cgAcademyDaysCurrent) || 0,
+        academyTrainingDaysTarget: Number(cgAcademyDaysTarget) || 40,
+      } : {}),
+      milestones: cgMilestones
+        .filter((m) => m.trim() !== '')
+        .map((m, i) => ({ id: `m_${Date.now()}_${i}`, title: m.trim(), completed: false })),
+    });
+
+    onClose();
   };
 
   const handleSubmit121 = (e: React.FormEvent) => {
@@ -226,6 +289,8 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({ isOpen, type, onCl
     onClose();
   };
 
+  if (!isOpen || !type) return null;
+
   return (
     <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 overflow-y-auto">
       <div className="bg-white border border-slate-200 rounded-xl max-w-xl w-full p-6 shadow-xl relative space-y-5 my-8">
@@ -233,16 +298,24 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({ isOpen, type, onCl
         {/* Header */}
         <div className="flex items-center justify-between border-b border-slate-100 pb-3">
           <div className="flex items-center gap-2">
+            {(type === 'companyGoal' || type === 'deptGoal') && (
+              goalMode === 'company' ? (
+                <Building2 className="w-5 h-5 text-blue-600" />
+              ) : (
+                <TrendingUp className="w-5 h-5 text-emerald-600" />
+              )
+            )}
             {type === '121' && <Users className="w-5 h-5 text-blue-600" />}
-            {type === 'deptGoal' && <TrendingUp className="w-5 h-5 text-blue-600" />}
             {type === 'activity' && <Award className="w-5 h-5 text-blue-600" />}
             {type === 'journal' && <Zap className="w-5 h-5 text-purple-600" />}
             {type === 'book' && <BookOpen className="w-5 h-5 text-blue-600" />}
             {type === 'personalBible' && <Heart className="w-5 h-5 text-rose-600" />}
 
             <h3 className="text-lg font-bold text-slate-900">
+              {(type === 'companyGoal' || type === 'deptGoal') && (
+                goalMode === 'company' ? 'Add Company Big Goal' : 'Add Department Goal'
+              )}
               {type === '121' && 'Log 1-on-1 (121) Session'}
-              {type === 'deptGoal' && 'Add Department Goal'}
               {type === 'activity' && 'Log Activity Impact'}
               {type === 'journal' && 'Add Strategic Reflection'}
               {type === 'book' && 'Add Book to Reading Log'}
@@ -258,142 +331,290 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({ isOpen, type, onCl
           </button>
         </div>
 
-        {/* Form 1: 121 Session */}
-        {type === '121' && (
-          <form onSubmit={handleSubmit121} className="space-y-4 text-xs text-slate-700 font-medium">
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="font-bold text-slate-900 block mb-1">Select Department / HOD</label>
-                <select
-                  value={selectedDeptId}
-                  onChange={(e) => handleDeptSelect(e.target.value)}
-                  className="w-full bg-slate-50 p-2.5 rounded-xl border border-slate-300 text-slate-900 focus:outline-none focus:border-blue-600 focus:bg-white"
-                >
-                  {departments.map((d) => (
-                    <option key={d.id} value={d.id}>
-                      {d.hod} ({d.name} - {d.companyId === 'next_energy' ? 'Next Energy' : 'Next Academy'})
-                    </option>
-                  ))}
-                </select>
-              </div>
+        {/* Goal Type Switcher Tabs (when creating goals) */}
+        {(type === 'companyGoal' || type === 'deptGoal') && (
+          <div className="bg-slate-100 p-1 rounded-xl flex items-center gap-1 border border-slate-200">
+            <button
+              type="button"
+              onClick={() => setGoalMode('company')}
+              className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                goalMode === 'company'
+                  ? 'bg-white text-blue-700 shadow-xs border border-slate-200'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <Building2 className="w-3.5 h-3.5" />
+              <span>🏢 Company Big Goal (Macro Objective)</span>
+            </button>
 
-              <div>
-                <label className="font-bold text-slate-900 block mb-1">Session Date</label>
-                <input
-                  type="date"
-                  value={sessionDate}
-                  onChange={(e) => setSessionDate(e.target.value)}
-                  className="w-full bg-slate-50 p-2.5 rounded-xl border border-slate-300 text-slate-900 focus:outline-none focus:border-blue-600 focus:bg-white"
-                />
+            <button
+              type="button"
+              onClick={() => setGoalMode('department')}
+              className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                goalMode === 'department'
+                  ? 'bg-white text-emerald-700 shadow-xs border border-slate-200'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <TrendingUp className="w-3.5 h-3.5" />
+              <span>⚡ Department Goal (HOD Operational)</span>
+            </button>
+          </div>
+        )}
+
+        {/* Form: Company Big Goal */}
+        {(type === 'companyGoal' || type === 'deptGoal') && goalMode === 'company' && (
+          <form onSubmit={handleSubmitCompanyGoal} className="space-y-4 text-xs text-slate-700 font-medium">
+            {/* Target Company Selector */}
+            <div>
+              <label className="font-bold text-slate-900 block mb-1.5">Target Company Entity</label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setCgCompany('next_energy')}
+                  className={`p-3 rounded-xl border text-left transition-all flex items-center gap-2.5 ${
+                    cgCompany === 'next_energy'
+                      ? 'bg-blue-50 border-blue-500 text-blue-900 ring-2 ring-blue-500/20 font-bold'
+                      : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
+                  }`}
+                >
+                  <Zap className={`w-4 h-4 ${cgCompany === 'next_energy' ? 'text-blue-600' : 'text-slate-400'}`} />
+                  <div>
+                    <div className="font-extrabold text-xs">Next Energy</div>
+                    <div className="text-[10px] text-slate-500 font-normal">Solar EPC & Asset Growth</div>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setCgCompany('next_academy')}
+                  className={`p-3 rounded-xl border text-left transition-all flex items-center gap-2.5 ${
+                    cgCompany === 'next_academy'
+                      ? 'bg-emerald-50 border-emerald-500 text-emerald-900 ring-2 ring-emerald-500/20 font-bold'
+                      : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
+                  }`}
+                >
+                  <GraduationCap className={`w-4 h-4 ${cgCompany === 'next_academy' ? 'text-emerald-600' : 'text-slate-400'}`} />
+                  <div>
+                    <div className="font-extrabold text-xs">Next Academy</div>
+                    <div className="text-[10px] text-slate-500 font-normal">Revenue & Training Days</div>
+                  </div>
+                </button>
               </div>
             </div>
 
+            {/* Title */}
             <div>
-              <label className="font-bold text-slate-900 block mb-1">Meeting Notes & Key Summary</label>
-              <textarea
-                rows={3}
-                value={sessionNotes}
-                onChange={(e) => setSessionNotes(e.target.value)}
-                placeholder="Key topics discussed, strategic decisions, updates..."
+              <label className="font-bold text-slate-900 block mb-1">Company Big Goal Title</label>
+              <input
+                type="text"
+                value={cgTitle}
+                onChange={(e) => setCgTitle(e.target.value)}
+                placeholder={
+                  cgCompany === 'next_academy'
+                    ? 'e.g. Next Academy Regional Training Expansion & Revenue Growth'
+                    : 'e.g. H2 2026 Commercial Solar EPC Pipeline & Market Leadership'
+                }
                 required
-                className="w-full bg-slate-50 p-2.5 rounded-xl border border-slate-300 text-slate-900 focus:outline-none focus:border-blue-600 focus:bg-white"
+                className="w-full bg-slate-50 p-2.5 rounded-xl border border-slate-300 text-slate-900 focus:outline-none focus:border-blue-600 focus:bg-white text-xs font-semibold"
               />
             </div>
 
-            {/* Sentiment Ups & Downs */}
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="font-bold text-emerald-700 block mb-1">Sentiment Highs / Ups</label>
-                {sessionUps.map((up, idx) => (
-                  <input
-                    key={idx}
-                    type="text"
-                    value={up}
-                    onChange={(e) => {
-                      const copy = [...sessionUps];
-                      copy[idx] = e.target.value;
-                      setSessionUps(copy);
-                    }}
-                    placeholder="e.g. Closed RM 1.5M contract"
-                    className="w-full bg-slate-50 p-2 rounded-lg border border-slate-300 text-slate-900 mb-1 focus:bg-white focus:border-emerald-600"
-                  />
-                ))}
-                <button
-                  type="button"
-                  onClick={() => setSessionUps([...sessionUps, ''])}
-                  className="text-[11px] text-emerald-700 font-bold hover:underline"
-                >
-                  + Add High
-                </button>
-              </div>
-
-              <div>
-                <label className="font-bold text-rose-700 block mb-1">Sentiment Lows / Blockers</label>
-                {sessionDowns.map((down, idx) => (
-                  <input
-                    key={idx}
-                    type="text"
-                    value={down}
-                    onChange={(e) => {
-                      const copy = [...sessionDowns];
-                      copy[idx] = e.target.value;
-                      setSessionDowns(copy);
-                    }}
-                    placeholder="e.g. Client legal approval delay"
-                    className="w-full bg-slate-50 p-2 rounded-lg border border-slate-300 text-slate-900 mb-1 focus:bg-white focus:border-rose-600"
-                  />
-                ))}
-                <button
-                  type="button"
-                  onClick={() => setSessionDowns([...sessionDowns, ''])}
-                  className="text-[11px] text-rose-700 font-bold hover:underline"
-                >
-                  + Add Blocker
-                </button>
-              </div>
-            </div>
-
-            {/* Energy Rating */}
+            {/* Description */}
             <div>
-              <label className="font-bold text-slate-900 block mb-1">Session Energy Rating (1 to 5)</label>
-              <div className="flex items-center gap-2">
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <button
-                    key={star}
-                    type="button"
-                    onClick={() => setSessionEnergy(star)}
-                    className={`px-3 py-1 rounded-lg border text-xs font-bold transition-all ${
-                      sessionEnergy >= star
-                        ? 'bg-amber-400 text-slate-900 border-amber-500 shadow-2xs'
-                        : 'bg-slate-50 text-slate-500 border-slate-300'
-                    }`}
-                  >
-                    ★ {star}
-                  </button>
-                ))}
-              </div>
+              <label className="font-bold text-slate-900 block mb-1">Strategic Objective & Context</label>
+              <textarea
+                rows={2}
+                value={cgDesc}
+                onChange={(e) => setCgDesc(e.target.value)}
+                placeholder="Key strategic outcomes, revenue drivers, and group impact..."
+                className="w-full bg-slate-50 p-2.5 rounded-xl border border-slate-300 text-slate-900 focus:outline-none focus:border-blue-600 focus:bg-white text-xs"
+              />
             </div>
 
-            <div className="pt-2 flex justify-end gap-2">
+            {/* Impact Level */}
+            <div>
+              <label className="font-bold text-slate-900 block mb-1">Strategic Weight / Impact Level</label>
+              <select
+                value={cgImpactLevel}
+                onChange={(e) => setCgImpactLevel(e.target.value as GoalImpactLevel)}
+                className="w-full bg-slate-50 p-2.5 rounded-xl border border-slate-300 text-slate-900 focus:outline-none focus:border-blue-600 focus:bg-white font-medium text-xs"
+              >
+                <option value="High">🔥 High Impact (1.5x Multiplier - Critical Executive Priority)</option>
+                <option value="Medium">⚡ Medium Impact (1.0x Multiplier - Standard Strategic Goal)</option>
+                <option value="Low">🌱 Low Impact (0.5x Multiplier - Supporting Initiative)</option>
+              </select>
+            </div>
+
+            {/* Target Metrics depending on Company */}
+            {cgCompany === 'next_academy' ? (
+              <div className="p-3.5 bg-emerald-50/80 border border-emerald-200 rounded-xl space-y-3">
+                <div className="font-extrabold text-emerald-950 text-xs flex items-center gap-1.5 uppercase tracking-wider">
+                  <GraduationCap className="w-4 h-4 text-emerald-700" />
+                  <span>Academy Macro Revenue & Training Volume Targets</span>
+                </div>
+                <div className="grid grid-cols-2 gap-2.5">
+                  <div>
+                    <label className="font-bold text-slate-800 block text-[11px] mb-1">Current Revenue (RM)</label>
+                    <input
+                      type="number"
+                      value={cgAcademyRevCurrent}
+                      onChange={(e) => setCgAcademyRevCurrent(e.target.value)}
+                      placeholder="0"
+                      className="w-full bg-white p-2 rounded-lg border border-emerald-300 text-slate-900 text-xs font-semibold"
+                    />
+                  </div>
+                  <div>
+                    <label className="font-bold text-slate-800 block text-[11px] mb-1">Target Revenue (RM)</label>
+                    <input
+                      type="number"
+                      value={cgAcademyRevTarget}
+                      onChange={(e) => setCgAcademyRevTarget(e.target.value)}
+                      placeholder="1000000"
+                      className="w-full bg-white p-2 rounded-lg border border-emerald-300 text-slate-900 text-xs font-semibold"
+                    />
+                  </div>
+                  <div>
+                    <label className="font-bold text-slate-800 block text-[11px] mb-1">Days Conducted</label>
+                    <input
+                      type="number"
+                      value={cgAcademyDaysCurrent}
+                      onChange={(e) => setCgAcademyDaysCurrent(e.target.value)}
+                      placeholder="0"
+                      className="w-full bg-white p-2 rounded-lg border border-emerald-300 text-slate-900 text-xs font-semibold"
+                    />
+                  </div>
+                  <div>
+                    <label className="font-bold text-slate-800 block text-[11px] mb-1">Target Training Days</label>
+                    <input
+                      type="number"
+                      value={cgAcademyDaysTarget}
+                      onChange={(e) => setCgAcademyDaysTarget(e.target.value)}
+                      placeholder="40"
+                      className="w-full bg-white p-2 rounded-lg border border-emerald-300 text-slate-900 text-xs font-semibold"
+                    />
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="p-3.5 bg-blue-50/80 border border-blue-200 rounded-xl space-y-3">
+                <div className="font-extrabold text-blue-950 text-xs flex items-center gap-1.5 uppercase tracking-wider">
+                  <Zap className="w-4 h-4 text-blue-700" />
+                  <span>Next Energy Target Metrics</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                  <div>
+                    <label className="font-bold text-slate-800 block text-[11px] mb-1">Target Metric Name</label>
+                    <input
+                      type="text"
+                      value={cgTargetMetric}
+                      onChange={(e) => setCgTargetMetric(e.target.value)}
+                      placeholder="e.g. Contract Pipeline"
+                      className="w-full bg-white p-2 rounded-lg border border-blue-300 text-slate-900 text-xs"
+                    />
+                  </div>
+                  <div>
+                    <label className="font-bold text-slate-800 block text-[11px] mb-1">Current Progress</label>
+                    <input
+                      type="number"
+                      value={cgCurrentVal}
+                      onChange={(e) => setCgCurrentVal(e.target.value)}
+                      placeholder="0"
+                      className="w-full bg-white p-2 rounded-lg border border-blue-300 text-slate-900 text-xs font-semibold"
+                    />
+                  </div>
+                  <div>
+                    <label className="font-bold text-slate-800 block text-[11px] mb-1">Target Goal Value</label>
+                    <input
+                      type="number"
+                      value={cgTargetVal}
+                      onChange={(e) => setCgTargetVal(e.target.value)}
+                      placeholder="25"
+                      className="w-full bg-white p-2 rounded-lg border border-blue-300 text-slate-900 text-xs font-semibold"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="font-bold text-slate-800 block text-[11px] mb-1">Unit of Measurement</label>
+                  <input
+                    type="text"
+                    value={cgUnit}
+                    onChange={(e) => setCgUnit(e.target.value)}
+                    placeholder="e.g. RM Million, MWp, Signed Deals"
+                    className="w-full bg-white p-2 rounded-lg border border-blue-300 text-slate-900 text-xs"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Target Completion Date */}
+            <div>
+              <label className="font-bold text-slate-900 block mb-1">Target Completion Date</label>
+              <input
+                type="date"
+                value={cgTargetDate}
+                onChange={(e) => setCgTargetDate(e.target.value)}
+                className="w-full bg-slate-50 p-2.5 rounded-xl border border-slate-300 text-slate-900 focus:outline-none focus:border-blue-600 focus:bg-white text-xs"
+              />
+            </div>
+
+            {/* Key Milestones */}
+            <div className="space-y-1.5">
+              <label className="font-bold text-slate-900 block mb-1">Key Deliverables & Milestones</label>
+              {cgMilestones.map((m, idx) => (
+                <div key={idx} className="flex items-center gap-1.5">
+                  <input
+                    type="text"
+                    value={m}
+                    onChange={(e) => {
+                      const copy = [...cgMilestones];
+                      copy[idx] = e.target.value;
+                      setCgMilestones(copy);
+                    }}
+                    placeholder={`e.g. Milestone ${idx + 1}: Finalize partner onboarding`}
+                    className="w-full bg-slate-50 p-2 rounded-lg border border-slate-300 text-slate-900 focus:bg-white text-xs"
+                  />
+                  {cgMilestones.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => setCgMilestones(cgMilestones.filter((_, i) => i !== idx))}
+                      className="p-2 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-slate-100"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={() => setCgMilestones([...cgMilestones, ''])}
+                className="text-[11px] text-blue-600 font-bold hover:underline flex items-center gap-1 pt-1"
+              >
+                <Plus className="w-3.5 h-3.5" /> Add Milestone
+              </button>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="pt-3 flex justify-end gap-2 border-t border-slate-100">
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2 bg-slate-100 text-slate-700 font-bold rounded-xl hover:bg-slate-200 transition-colors"
+                className="px-4 py-2 bg-slate-100 text-slate-700 font-bold rounded-xl hover:bg-slate-200"
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                className="px-5 py-2 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-500 transition-colors shadow-sm"
+                className="px-5 py-2 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-500 shadow-sm flex items-center gap-1.5"
               >
-                Save 121 Session
+                <Plus className="w-4 h-4" /> Create Company Big Goal
               </button>
             </div>
           </form>
         )}
 
-        {/* Form 2: Department Goal */}
-        {type === 'deptGoal' && (
+        {/* Form: Department Goal */}
+        {(type === 'companyGoal' || type === 'deptGoal') && goalMode === 'department' && (
           <form onSubmit={handleSubmitDeptGoal} className="space-y-4 text-xs text-slate-700 font-medium">
             <div>
               <label className="font-bold text-slate-900 block mb-1">Select Department</label>
@@ -524,7 +745,43 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({ isOpen, type, onCl
               </div>
             )}
 
-            <div className="pt-2 flex justify-end gap-2">
+            {/* Key Milestones for Dept Goal */}
+            <div className="space-y-1.5">
+              <label className="font-bold text-slate-900 block mb-1">Key Department Milestones</label>
+              {goalMilestones.map((m, idx) => (
+                <div key={idx} className="flex items-center gap-1.5">
+                  <input
+                    type="text"
+                    value={m}
+                    onChange={(e) => {
+                      const copy = [...goalMilestones];
+                      copy[idx] = e.target.value;
+                      setGoalMilestones(copy);
+                    }}
+                    placeholder={`e.g. Milestone ${idx + 1}: Finalize partner onboarding`}
+                    className="w-full bg-slate-50 p-2 rounded-lg border border-slate-300 text-slate-900 focus:bg-white text-xs"
+                  />
+                  {goalMilestones.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => setGoalMilestones(goalMilestones.filter((_, i) => i !== idx))}
+                      className="p-2 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-slate-100"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={() => setGoalMilestones([...goalMilestones, ''])}
+                className="text-[11px] text-emerald-600 font-bold hover:underline flex items-center gap-1 pt-1"
+              >
+                <Plus className="w-3.5 h-3.5" /> Add Milestone
+              </button>
+            </div>
+
+            <div className="pt-2 flex justify-end gap-2 border-t border-slate-100">
               <button
                 type="button"
                 onClick={onClose}
@@ -534,9 +791,143 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({ isOpen, type, onCl
               </button>
               <button
                 type="submit"
-                className="px-5 py-2 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-500 shadow-sm"
+                className="px-5 py-2 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-500 shadow-sm flex items-center gap-1.5"
               >
-                Add Dept Goal
+                <Plus className="w-4 h-4" /> Add Department Goal
+              </button>
+            </div>
+          </form>
+        )}
+
+        {/* Form: 121 Session */}
+        {type === '121' && (
+          <form onSubmit={handleSubmit121} className="space-y-4 text-xs text-slate-700 font-medium">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="font-bold text-slate-900 block mb-1">Select Department / HOD</label>
+                <select
+                  value={selectedDeptId}
+                  onChange={(e) => handleDeptSelect(e.target.value)}
+                  className="w-full bg-slate-50 p-2.5 rounded-xl border border-slate-300 text-slate-900 focus:outline-none focus:border-blue-600 focus:bg-white"
+                >
+                  {departments.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.hod} ({d.name} - {d.companyId === 'next_energy' ? 'Next Energy' : 'Next Academy'})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="font-bold text-slate-900 block mb-1">Session Date</label>
+                <input
+                  type="date"
+                  value={sessionDate}
+                  onChange={(e) => setSessionDate(e.target.value)}
+                  className="w-full bg-slate-50 p-2.5 rounded-xl border border-slate-300 text-slate-900 focus:outline-none focus:border-blue-600 focus:bg-white"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="font-bold text-slate-900 block mb-1">Meeting Notes & Key Summary</label>
+              <textarea
+                rows={3}
+                value={sessionNotes}
+                onChange={(e) => setSessionNotes(e.target.value)}
+                placeholder="Key topics discussed, strategic decisions, updates..."
+                required
+                className="w-full bg-slate-50 p-2.5 rounded-xl border border-slate-300 text-slate-900 focus:outline-none focus:border-blue-600 focus:bg-white"
+              />
+            </div>
+
+            {/* Sentiment Ups & Downs */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="font-bold text-emerald-700 block mb-1">Sentiment Highs / Ups</label>
+                {sessionUps.map((up, idx) => (
+                  <input
+                    key={idx}
+                    type="text"
+                    value={up}
+                    onChange={(e) => {
+                      const copy = [...sessionUps];
+                      copy[idx] = e.target.value;
+                      setSessionUps(copy);
+                    }}
+                    placeholder="e.g. Closed RM 1.5M contract"
+                    className="w-full bg-slate-50 p-2 rounded-lg border border-slate-300 text-slate-900 mb-1 focus:bg-white focus:border-emerald-600"
+                  />
+                ))}
+                <button
+                  type="button"
+                  onClick={() => setSessionUps([...sessionUps, ''])}
+                  className="text-[11px] text-emerald-700 font-bold hover:underline"
+                >
+                  + Add High
+                </button>
+              </div>
+
+              <div>
+                <label className="font-bold text-rose-700 block mb-1">Sentiment Lows / Blockers</label>
+                {sessionDowns.map((down, idx) => (
+                  <input
+                    key={idx}
+                    type="text"
+                    value={down}
+                    onChange={(e) => {
+                      const copy = [...sessionDowns];
+                      copy[idx] = e.target.value;
+                      setSessionDowns(copy);
+                    }}
+                    placeholder="e.g. Client legal approval delay"
+                    className="w-full bg-slate-50 p-2 rounded-lg border border-slate-300 text-slate-900 mb-1 focus:bg-white focus:border-rose-600"
+                  />
+                ))}
+                <button
+                  type="button"
+                  onClick={() => setSessionDowns([...sessionDowns, ''])}
+                  className="text-[11px] text-rose-700 font-bold hover:underline"
+                >
+                  + Add Blocker
+                </button>
+              </div>
+            </div>
+
+            {/* Energy Rating */}
+            <div>
+              <label className="font-bold text-slate-900 block mb-1">Session Energy Rating (1 to 5)</label>
+              <div className="flex items-center gap-2">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    type="button"
+                    onClick={() => setSessionEnergy(star)}
+                    className={`px-3 py-1 rounded-lg border text-xs font-bold transition-all ${
+                      sessionEnergy >= star
+                        ? 'bg-amber-400 text-slate-900 border-amber-500 shadow-2xs'
+                        : 'bg-slate-50 text-slate-500 border-slate-300'
+                    }`}
+                  >
+                    ★ {star}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="pt-2 flex justify-end gap-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-2 bg-slate-100 text-slate-700 font-bold rounded-xl hover:bg-slate-200 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="px-5 py-2 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-500 transition-colors shadow-sm"
+              >
+                Save 121 Session
               </button>
             </div>
           </form>

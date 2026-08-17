@@ -10,9 +10,9 @@ import { QuickAddModal } from './components/Modals/QuickAddModal';
 
 export function DashboardApp() {
   const [activeTab, setActiveTab] = useState<'goals' | 'roadmap' | '121s' | 'wellness' | 'performance'>('goals');
-  const [modalType, setModalType] = useState<'121' | 'deptGoal' | 'activity' | 'journal' | 'book' | 'personalBible' | null>(null);
+  const [modalType, setModalType] = useState<'121' | 'companyGoal' | 'deptGoal' | 'activity' | 'journal' | 'book' | 'personalBible' | null>(null);
 
-  const handleOpenQuickAdd = (type: '121' | 'deptGoal' | 'activity' | 'journal') => {
+  const handleOpenQuickAdd = (type: '121' | 'companyGoal' | 'deptGoal' | 'activity' | 'journal') => {
     setModalType(type);
   };
 
@@ -27,7 +27,10 @@ export function DashboardApp() {
 
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {activeTab === 'goals' && (
-            <DashboardCompanyProgress onOpenAddGoal={() => setModalType('deptGoal')} />
+            <DashboardCompanyProgress
+              onOpenAddCompanyGoal={() => setModalType('companyGoal')}
+              onOpenAddDeptGoal={() => setModalType('deptGoal')}
+            />
           )}
 
           {activeTab === 'roadmap' && (

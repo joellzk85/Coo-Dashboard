@@ -2,6 +2,7 @@ import React from 'react';
 import { useDashboard } from '../context/DashboardContext';
 import {
   TrendingUp,
+  Building2,
   Users,
   Award,
   Zap,
@@ -19,7 +20,7 @@ import {
 interface NavbarProps {
   activeTab: 'goals' | 'roadmap' | '121s' | 'wellness' | 'performance';
   setActiveTab: (tab: 'goals' | 'roadmap' | '121s' | 'wellness' | 'performance') => void;
-  onOpenQuickAdd: (type: '121' | 'deptGoal' | 'activity' | 'journal') => void;
+  onOpenQuickAdd: (type: '121' | 'companyGoal' | 'deptGoal' | 'activity' | 'journal') => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, onOpenQuickAdd }) => {
@@ -152,20 +153,27 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, onOpenQ
                   <span>Quick Log</span>
                 </button>
 
-                <div className="absolute right-0 top-full mt-1.5 w-48 bg-slate-900 border border-slate-800 rounded-xl shadow-2xl py-1 hidden group-hover:block z-50">
+                <div className="absolute right-0 top-full mt-1.5 w-52 bg-slate-900 border border-slate-800 rounded-xl shadow-2xl py-1 hidden group-hover:block z-50">
                   <button
-                    onClick={() => onOpenQuickAdd('121')}
+                    onClick={() => onOpenQuickAdd('companyGoal')}
                     className="w-full text-left px-3.5 py-2 text-xs text-slate-200 hover:bg-slate-800 hover:text-blue-400 flex items-center gap-2"
                   >
-                    <Users className="w-3.5 h-3.5 text-blue-400" />
-                    <span>Log 121 Session</span>
+                    <Building2 className="w-3.5 h-3.5 text-blue-400" />
+                    <span className="font-semibold">🏢 Add Big Goal (Company)</span>
                   </button>
                   <button
                     onClick={() => onOpenQuickAdd('deptGoal')}
                     className="w-full text-left px-3.5 py-2 text-xs text-slate-200 hover:bg-slate-800 hover:text-blue-400 flex items-center gap-2"
                   >
                     <TrendingUp className="w-3.5 h-3.5 text-emerald-400" />
-                    <span>Add Dept Goal</span>
+                    <span>⚡ Add Department Goal</span>
+                  </button>
+                  <button
+                    onClick={() => onOpenQuickAdd('121')}
+                    className="w-full text-left px-3.5 py-2 text-xs text-slate-200 hover:bg-slate-800 hover:text-blue-400 flex items-center gap-2"
+                  >
+                    <Users className="w-3.5 h-3.5 text-indigo-400" />
+                    <span>Log 121 Session</span>
                   </button>
                   <button
                     onClick={() => onOpenQuickAdd('activity')}
