@@ -36,6 +36,7 @@ import {
   collection,
   doc,
   onSnapshot,
+  getDoc,
   setDoc,
   updateDoc,
   deleteDoc,
@@ -217,18 +218,27 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     // Listeners array to cleanup on unmount or user change
     const unsubs: Array<() => void> = [];
 
-    // Helper to set up realtime collection listener with auto-seeding if empty
+    // Helper to set up realtime collection listener with auto-seeding ONLY on first-ever load
     const setupListener = <T extends { id: string }>(
       colName: string,
       initialData: T[],
       setState: React.Dispatch<React.SetStateAction<T[]>>
     ) => {
       const col = userRef(colName);
+      const seededMarkerRef = doc(db, 'users', uid, '_seeded', colName);
+
       const unsub = onSnapshot(
         col,
         async (snapshot) => {
           if (snapshot.empty) {
-            // Seed initial data to cloud for new account and set local state immediately
+            const markerSnap = await getDoc(seededMarkerRef);
+            if (markerSnap.exists()) {
+              // Already seeded before — this is a real, intentional empty state (user deleted everything)
+              setState([]);
+              setSyncStatus('synced');
+              return;
+            }
+            // First time ever for this collection — seed initial data to cloud
             setState(initialData);
             setSyncStatus('synced');
             try {
@@ -237,6 +247,7 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
                 const itemDocRef = doc(db, 'users', uid, colName, item.id);
                 batch.set(itemDocRef, cleanObject(item));
               });
+              batch.set(seededMarkerRef, { seededAt: new Date().toISOString() });
               await batch.commit();
             } catch (e) {
               console.error(`Error seeding ${colName} to cloud:`, e);
