@@ -1,6 +1,5 @@
 import React from 'react';
 import { useDashboard } from '../context/DashboardContext';
-import { CloudSyncPill } from './CloudSyncPill';
 import {
   TrendingUp,
   Users,
@@ -61,12 +60,8 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, onOpenQ
             </div>
           </div>
 
-          {/* Controls: Company Filter + Month Selector + Quick Add + Cloud Sync */}
+          {/* Controls: Company Filter + Month Selector + Quick Add */}
           <div className="flex flex-wrap items-center gap-3">
-            
-            {/* Cloud Real-Time Sync Indicator */}
-            <CloudSyncPill />
-
             {/* Company Selector Pills */}
             <div className="bg-slate-950 p-1 rounded-lg border border-slate-800 flex items-center gap-1">
               <button
