@@ -20,7 +20,7 @@ import {
 interface NavbarProps {
   activeTab: 'goals' | 'roadmap' | '121s' | 'wellness' | 'performance';
   setActiveTab: (tab: 'goals' | 'roadmap' | '121s' | 'wellness' | 'performance') => void;
-  onOpenQuickAdd: (type: '121' | 'companyGoal' | 'deptGoal' | 'activity' | 'journal') => void;
+  onOpenQuickAdd: (type: '121' | 'companyGoal' | 'deptGoal' | 'activity' | 'journal' | 'addHod') => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, onOpenQuickAdd }) => {
@@ -174,6 +174,13 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, onOpenQ
                   >
                     <Users className="w-3.5 h-3.5 text-indigo-400" />
                     <span>Log 121 Session</span>
+                  </button>
+                  <button
+                    onClick={() => onOpenQuickAdd('addHod')}
+                    className="w-full text-left px-3.5 py-2 text-xs text-slate-200 hover:bg-slate-800 hover:text-blue-400 flex items-center gap-2"
+                  >
+                    <Users className="w-3.5 h-3.5 text-cyan-400" />
+                    <span className="font-semibold">👥 Add New HOD / Leader</span>
                   </button>
                   <button
                     onClick={() => onOpenQuickAdd('activity')}

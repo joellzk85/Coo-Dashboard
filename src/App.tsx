@@ -10,9 +10,9 @@ import { QuickAddModal } from './components/Modals/QuickAddModal';
 
 export function DashboardApp() {
   const [activeTab, setActiveTab] = useState<'goals' | 'roadmap' | '121s' | 'wellness' | 'performance'>('goals');
-  const [modalType, setModalType] = useState<'121' | 'companyGoal' | 'deptGoal' | 'activity' | 'journal' | 'book' | 'personalBible' | null>(null);
+  const [modalType, setModalType] = useState<'121' | 'companyGoal' | 'deptGoal' | 'activity' | 'journal' | 'book' | 'personalBible' | 'addHod' | null>(null);
 
-  const handleOpenQuickAdd = (type: '121' | 'companyGoal' | 'deptGoal' | 'activity' | 'journal') => {
+  const handleOpenQuickAdd = (type: '121' | 'companyGoal' | 'deptGoal' | 'activity' | 'journal' | 'addHod') => {
     setModalType(type);
   };
 

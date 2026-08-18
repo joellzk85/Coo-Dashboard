@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useDashboard } from '../context/DashboardContext';
-import { Session121, Department } from '../types/dashboard';
+import { Session121, Department, CompanyId } from '../types/dashboard';
 import {
   Users,
   Calendar,
@@ -19,8 +19,11 @@ import {
   ChevronDown,
   ChevronUp,
   Search,
-  FolderKanban
+  FolderKanban,
+  UserPlus,
+  Settings
 } from 'lucide-react';
+import { ManageHodModal } from './Modals/ManageHodModal';
 
 interface Dashboard121TrackerProps {
   onOpenAdd121: () => void;
@@ -38,9 +41,16 @@ export const Dashboard121Tracker: React.FC<Dashboard121TrackerProps> = ({ onOpen
 
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedSessionId, setExpandedSessionId] = useState<string | null>(null);
+  const [isHodModalOpen, setIsHodModalOpen] = useState(false);
+  const [hodModalInitialCompany, setHodModalInitialCompany] = useState<CompanyId>('next_energy');
   
   // Track collapsed state for month groups
   const [collapsedMonths, setCollapsedMonths] = useState<Record<string, boolean>>({});
+
+  const handleOpenAddHod = (company: CompanyId = 'next_energy') => {
+    setHodModalInitialCompany(company);
+    setIsHodModalOpen(true);
+  };
 
   const toggleMonthCollapse = (monthKey: string) => {
     setCollapsedMonths(prev => ({
@@ -132,13 +142,30 @@ export const Dashboard121Tracker: React.FC<Dashboard121TrackerProps> = ({ onOpen
             </h2>
           </div>
 
-          <button
-            onClick={onOpenAdd121}
-            className="bg-blue-600 hover:bg-blue-500 text-white font-bold px-4 py-2 rounded-xl text-xs flex items-center gap-2 transition-all shadow-sm self-start md:self-auto"
-          >
-            <Plus className="w-4 h-4 stroke-[2.5]" />
-            <span>Log New 121 Session</span>
-          </button>
+          <div className="flex flex-wrap items-center gap-2 self-start md:self-auto">
+            <button
+              onClick={() => handleOpenAddHod(selectedCompany === 'next_academy' ? 'next_academy' : 'next_energy')}
+              className="bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold px-3.5 py-2 rounded-xl text-xs flex items-center gap-1.5 transition-all shadow-xs border border-slate-200 cursor-pointer"
+            >
+              <UserPlus className="w-4 h-4 text-blue-600" />
+              <span>+ Add HOD</span>
+            </button>
+            <button
+              onClick={() => setIsHodModalOpen(true)}
+              className="bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold px-3 py-2 rounded-xl text-xs flex items-center gap-1.5 transition-all shadow-xs border border-slate-200 cursor-pointer"
+              title="Manage all HODs roster"
+            >
+              <Settings className="w-3.5 h-3.5 text-slate-600" />
+              <span>Manage Roster</span>
+            </button>
+            <button
+              onClick={onOpenAdd121}
+              className="bg-blue-600 hover:bg-blue-500 text-white font-bold px-4 py-2 rounded-xl text-xs flex items-center gap-2 transition-all shadow-sm cursor-pointer"
+            >
+              <Plus className="w-4 h-4 stroke-[2.5]" />
+              <span>Log New 121 Session</span>
+            </button>
+          </div>
         </div>
 
         {/* Big Rate Gauge & Cadence Breakdown Cards */}
@@ -159,43 +186,82 @@ export const Dashboard121Tracker: React.FC<Dashboard121TrackerProps> = ({ onOpen
           </div>
 
           <div className="bg-slate-50 border border-slate-200 p-5 rounded-xl space-y-1">
-            <div className="flex items-center gap-1 text-blue-700 font-bold text-xs uppercase text-[10px]">
-              <Zap className="w-3.5 h-3.5 fill-blue-600 text-blue-600" /> Next Energy HODs (Weekly)
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1 text-blue-700 font-bold text-xs uppercase text-[10px]">
+                <Zap className="w-3.5 h-3.5 fill-blue-600 text-blue-600" /> Next Energy HODs (Weekly)
+              </div>
+              <button
+                onClick={() => handleOpenAddHod('next_energy')}
+                className="text-[10px] text-blue-600 font-bold hover:underline cursor-pointer"
+              >
+                + Add
+              </button>
             </div>
             <div className="text-xl font-black text-slate-900 mt-1">
               {neWeeklyDepts.filter((d) => checkCadenceStatus(d).isCompliant).length} / {neWeeklyDepts.length} HODs
             </div>
-            <p className="text-[11px] text-slate-500">Weekly cadence required (Michael, Ivonne, Trish, Sam/Alvin, Zalin, Shawna)</p>
+            <p className="text-[11px] text-slate-500 line-clamp-2" title={neWeeklyDepts.map((d) => d.hod).join(', ')}>
+              Weekly: {neWeeklyDepts.length > 0 ? neWeeklyDepts.map((d) => d.hod).join(', ') : 'None added yet'}
+            </p>
           </div>
 
           <div className="bg-slate-50 border border-slate-200 p-5 rounded-xl space-y-1">
-            <div className="flex items-center gap-1 text-amber-700 font-bold text-xs uppercase text-[10px]">
-              <Sparkles className="w-3.5 h-3.5 text-amber-500" /> Executive Bosses (Monthly)
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1 text-amber-700 font-bold text-xs uppercase text-[10px]">
+                <Sparkles className="w-3.5 h-3.5 text-amber-500" /> Executive Bosses (Monthly)
+              </div>
+              <button
+                onClick={() => handleOpenAddHod('group')}
+                className="text-[10px] text-amber-600 font-bold hover:underline cursor-pointer"
+              >
+                + Add
+              </button>
             </div>
             <div className="text-xl font-black text-slate-900 mt-1">
               {neBosses.filter((d) => checkCadenceStatus(d).isCompliant).length} / {neBosses.length} Bosses
             </div>
-            <p className="text-[11px] text-slate-500">CEO Lim Chze Hong & Group CEO Steven Chiew</p>
+            <p className="text-[11px] text-slate-500 line-clamp-2" title={neBosses.map((d) => d.hod).join(', ')}>
+              Monthly: {neBosses.length > 0 ? neBosses.map((d) => d.hod).join(', ') : 'None added yet'}
+            </p>
           </div>
 
           <div className="bg-slate-50 border border-slate-200 p-5 rounded-xl space-y-1">
-            <div className="flex items-center gap-1 text-emerald-700 font-bold text-xs uppercase text-[10px]">
-              <GraduationCap className="w-3.5 h-3.5 text-emerald-600" /> Next Academy Leadership
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1 text-emerald-700 font-bold text-xs uppercase text-[10px]">
+                <GraduationCap className="w-3.5 h-3.5 text-emerald-600" /> Next Academy Leadership
+              </div>
+              <button
+                onClick={() => handleOpenAddHod('next_academy')}
+                className="text-[10px] text-emerald-600 font-bold hover:underline cursor-pointer"
+              >
+                + Add
+              </button>
             </div>
             <div className="text-xl font-black text-slate-900 mt-1">
               {naWeeklyDepts.concat(naMonthlyDepts).filter((d) => checkCadenceStatus(d).isCompliant).length} / {naWeeklyDepts.length + naMonthlyDepts.length} Roles
             </div>
-            <p className="text-[11px] text-slate-500">Weekly: Ying | Monthly: Chee Cai, Alif, Atiqa</p>
+            <p className="text-[11px] text-slate-500 line-clamp-2" title={naWeeklyDepts.concat(naMonthlyDepts).map((d) => d.hod).join(', ')}>
+              Leadership: {naWeeklyDepts.concat(naMonthlyDepts).length > 0 ? naWeeklyDepts.concat(naMonthlyDepts).map((d) => d.hod).join(', ') : 'None added yet'}
+            </p>
           </div>
         </div>
       </section>
 
       {/* 2. Team Member Cadence Matrix */}
       <section className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm space-y-4">
-        <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-          <Calendar className="w-5 h-5 text-blue-600" />
-          <span>Cadence Compliance Matrix ({selectedMonth})</span>
-        </h3>
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+            <Calendar className="w-5 h-5 text-blue-600" />
+            <span>Cadence Compliance Matrix ({selectedMonth})</span>
+          </h3>
+          <button
+            onClick={() => handleOpenAddHod(selectedCompany === 'next_academy' ? 'next_academy' : 'next_energy')}
+            className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1 hover:underline cursor-pointer"
+          >
+            <UserPlus className="w-3.5 h-3.5" />
+            <span>+ Add New HOD</span>
+          </button>
+        </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {allDepts.map((d) => {
@@ -205,7 +271,7 @@ export const Dashboard121Tracker: React.FC<Dashboard121TrackerProps> = ({ onOpen
             return (
               <div
                 key={d.id}
-                className="bg-slate-50 border border-slate-200 p-3.5 rounded-xl flex items-center justify-between gap-3"
+                className="bg-slate-50 border border-slate-200 p-3.5 rounded-xl flex items-center justify-between gap-3 hover:border-blue-300 transition-colors"
               >
                 <div>
                   <div className="flex items-center gap-1.5">
@@ -249,6 +315,15 @@ export const Dashboard121Tracker: React.FC<Dashboard121TrackerProps> = ({ onOpen
               </div>
             );
           })}
+
+          {/* Quick Add HOD Card Trigger */}
+          <button
+            onClick={() => handleOpenAddHod(selectedCompany === 'next_academy' ? 'next_academy' : 'next_energy')}
+            className="p-3.5 rounded-xl border-2 border-dashed border-slate-200 hover:border-blue-400 bg-slate-50/50 hover:bg-blue-50/30 flex items-center justify-center gap-2 text-slate-500 hover:text-blue-600 transition-all text-xs font-bold cursor-pointer min-h-[70px]"
+          >
+            <UserPlus className="w-4 h-4 text-blue-500" />
+            <span>+ Add New HOD / Team Lead</span>
+          </button>
         </div>
       </section>
 
@@ -498,6 +573,13 @@ export const Dashboard121Tracker: React.FC<Dashboard121TrackerProps> = ({ onOpen
           </div>
         )}
       </section>
+
+      {/* Dynamic HOD and Department Management Modal */}
+      <ManageHodModal
+        isOpen={isHodModalOpen}
+        onClose={() => setIsHodModalOpen(false)}
+        initialCompany={hodModalInitialCompany}
+      />
     </div>
   );
 };

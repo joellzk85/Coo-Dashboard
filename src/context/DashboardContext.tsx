@@ -110,6 +110,11 @@ interface DashboardContextType {
   personalGoalsAndBible: PersonalGoalAndBible[];
   wellnessLogs: WellnessLog[];
 
+  // Department & HOD CRUD actions
+  addDepartment: (dept: Omit<Department, 'id'>) => Promise<Department>;
+  updateDepartment: (id: string, dept: Partial<Department>) => Promise<void>;
+  deleteDepartment: (id: string) => Promise<void>;
+
   // Goal CRUD actions
   addCompanyGoal: (goal: Omit<CompanyGoal, 'id' | 'lastUpdated'>) => Promise<void>;
   updateCompanyGoal: (id: string, goal: Partial<CompanyGoal>) => Promise<void>;
@@ -189,6 +194,7 @@ function cleanObject<T extends Record<string, any>>(obj: T): T {
 
 // Root-level Firestore collections for clean and robust synchronization
 const COLLECTIONS = {
+  departments: 'coo_departments',
   companyGoals: 'coo_company_goals',
   departmentGoals: 'coo_department_goals',
   sessions121: 'coo_sessions_121',
@@ -210,7 +216,7 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null);
   const [syncError, setSyncError] = useState<string | null>(null);
 
-  const [departments] = useState<Department[]>(INITIAL_DEPARTMENTS);
+  const [departments, setDepartments] = useState<Department[]>(INITIAL_DEPARTMENTS);
   const [companyGoals, setCompanyGoals] = useState<CompanyGoal[]>(INITIAL_COMPANY_GOALS);
   const [departmentGoals, setDepartmentGoals] = useState<DepartmentGoal[]>(INITIAL_DEPARTMENT_GOALS);
   const [sessions121, setSessions121] = useState<Session121[]>(INITIAL_121_SESSIONS);
@@ -234,6 +240,15 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         
         // If metadata exists, respect whatever state the database is in (do not re-seed over user changes or clean slates)
         if (metaSnap.exists()) {
+          // Check if departments specifically need backfilling
+          const deptCheck = await getDocs(collection(db, COLLECTIONS.departments));
+          if (deptCheck.empty) {
+            const batch = writeBatch(db);
+            INITIAL_DEPARTMENTS.forEach((d) => {
+              batch.set(doc(db, COLLECTIONS.departments, d.id), cleanObject(d));
+            });
+            await batch.commit();
+          }
           return;
         }
 
@@ -242,6 +257,9 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           console.log('Seeding initial executive dashboard data directly to Cloud Firestore...');
           const batch = writeBatch(db);
           
+          INITIAL_DEPARTMENTS.forEach((d) => {
+            batch.set(doc(db, COLLECTIONS.departments, d.id), cleanObject(d));
+          });
           INITIAL_COMPANY_GOALS.forEach((g) => {
             batch.set(doc(db, COLLECTIONS.companyGoals, g.id), cleanObject(g));
           });
@@ -276,6 +294,15 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           await batch.commit();
           console.log('Direct Cloud Firestore seed completed.');
         } else {
+          // Check if departments need backfilling
+          const deptCheck = await getDocs(collection(db, COLLECTIONS.departments));
+          if (deptCheck.empty) {
+            const batch = writeBatch(db);
+            INITIAL_DEPARTMENTS.forEach((d) => {
+              batch.set(doc(db, COLLECTIONS.departments, d.id), cleanObject(d));
+            });
+            await batch.commit();
+          }
           await setDoc(metaRef, {
             isInitialized: true,
             initializedAt: new Date().toISOString(),
@@ -298,7 +325,12 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         colRef,
         (snapshot) => {
           const items = snapshot.docs.map((d) => d.data() as T);
-          setState(items);
+          if (colName === COLLECTIONS.departments && items.length === 0) {
+            // Keep initial departments if collection empty
+            setState(INITIAL_DEPARTMENTS as any);
+          } else {
+            setState(items);
+          }
           setSyncStatus('synced');
           setLastSyncedAt(new Date());
           setSyncError(null);
@@ -312,6 +344,7 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       unsubs.push(unsub);
     };
 
+    setupListener(COLLECTIONS.departments, setDepartments);
     setupListener(COLLECTIONS.companyGoals, setCompanyGoals);
     setupListener(COLLECTIONS.departmentGoals, setDepartmentGoals);
     setupListener(COLLECTIONS.sessions121, setSessions121);
@@ -334,6 +367,58 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       }
       return [...prev, month];
     });
+  };
+
+  // --- Department & HOD CRUD ---
+  const addDepartment = async (dept: Omit<Department, 'id'>): Promise<Department> => {
+    const id = `dept_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+    const newDept: Department = {
+      ...dept,
+      id,
+    };
+    setDepartments((prev) => [...prev, newDept]);
+    try {
+      setSyncStatus('syncing');
+      await setDoc(doc(db, COLLECTIONS.departments, id), cleanObject(newDept));
+      setSyncStatus('synced');
+      setLastSyncedAt(new Date());
+    } catch (err: any) {
+      console.error('Error adding department / HOD to cloud:', err);
+      setSyncStatus('error');
+      setSyncError(err.message);
+    }
+    return newDept;
+  };
+
+  const updateDepartment = async (id: string, partial: Partial<Department>) => {
+    const existing = departments.find((d) => d.id === id);
+    if (!existing) return;
+    const updated = { ...existing, ...partial };
+    setDepartments((prev) => prev.map((d) => (d.id === id ? updated : d)));
+    try {
+      setSyncStatus('syncing');
+      await setDoc(doc(db, COLLECTIONS.departments, id), cleanObject(updated));
+      setSyncStatus('synced');
+      setLastSyncedAt(new Date());
+    } catch (err: any) {
+      console.error('Error updating department / HOD in cloud:', err);
+      setSyncStatus('error');
+      setSyncError(err.message);
+    }
+  };
+
+  const deleteDepartment = async (id: string) => {
+    setDepartments((prev) => prev.filter((d) => d.id !== id));
+    try {
+      setSyncStatus('syncing');
+      await deleteDoc(doc(db, COLLECTIONS.departments, id));
+      setSyncStatus('synced');
+      setLastSyncedAt(new Date());
+    } catch (err: any) {
+      console.error('Error deleting department / HOD from cloud:', err);
+      setSyncStatus('error');
+      setSyncError(err.message);
+    }
   };
 
   // --- Company Goals CRUD ---
@@ -1097,6 +1182,7 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   // Reset to Demo Data in Cloud Firestore
   const resetToDemoData = async () => {
     setSyncStatus('syncing');
+    setDepartments(INITIAL_DEPARTMENTS);
     setCompanyGoals(INITIAL_COMPANY_GOALS);
     setDepartmentGoals(INITIAL_DEPARTMENT_GOALS);
     setSessions121(INITIAL_121_SESSIONS);
@@ -1109,6 +1195,7 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     try {
       const batch = writeBatch(db);
 
+      INITIAL_DEPARTMENTS.forEach((d) => batch.set(doc(db, COLLECTIONS.departments, d.id), cleanObject(d)));
       INITIAL_COMPANY_GOALS.forEach((g) => batch.set(doc(db, COLLECTIONS.companyGoals, g.id), cleanObject(g)));
       INITIAL_DEPARTMENT_GOALS.forEach((g) => batch.set(doc(db, COLLECTIONS.departmentGoals, g.id), cleanObject(g)));
       INITIAL_121_SESSIONS.forEach((s) => batch.set(doc(db, COLLECTIONS.sessions121, s.id), cleanObject(s)));
@@ -1141,6 +1228,7 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       const batch = writeBatch(db);
 
       const collectionsToClear = [
+        COLLECTIONS.departments,
         COLLECTIONS.companyGoals,
         COLLECTIONS.departmentGoals,
         COLLECTIONS.sessions121,
@@ -1167,6 +1255,7 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
       await batch.commit();
 
+      setDepartments([]);
       setCompanyGoals([]);
       setDepartmentGoals([]);
       setSessions121([]);
@@ -1190,6 +1279,7 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const exportDataJSON = () => {
     const data = {
+      departments,
       companyGoals,
       departmentGoals,
       sessions121,
@@ -1209,6 +1299,12 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       setSyncStatus('syncing');
       const batch = writeBatch(db);
 
+      if (parsed.departments) {
+        setDepartments(parsed.departments);
+        parsed.departments.forEach((d: any) => {
+          batch.set(doc(db, COLLECTIONS.departments, d.id), cleanObject(d));
+        });
+      }
       if (parsed.companyGoals) {
         setCompanyGoals(parsed.companyGoals);
         parsed.companyGoals.forEach((g: any) => {
@@ -1308,6 +1404,9 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         wellnessLogs,
 
         // CRUD
+        addDepartment,
+        updateDepartment,
+        deleteDepartment,
         addCompanyGoal,
         updateCompanyGoal,
         deleteCompanyGoal,

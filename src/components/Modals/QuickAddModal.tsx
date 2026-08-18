@@ -20,13 +20,14 @@ import {
 
 interface QuickAddModalProps {
   isOpen: boolean;
-  type: 'companyGoal' | 'deptGoal' | '121' | 'activity' | 'journal' | 'book' | 'personalBible' | null;
+  type: 'companyGoal' | 'deptGoal' | '121' | 'activity' | 'journal' | 'book' | 'personalBible' | 'addHod' | null;
   onClose: () => void;
 }
 
 export const QuickAddModal: React.FC<QuickAddModalProps> = ({ isOpen, type, onClose }) => {
   const {
     departments,
+    addDepartment,
     addCompanyGoal,
     add121Session,
     addDepartmentGoal,
@@ -39,11 +40,22 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({ isOpen, type, onCl
   // Mode switcher for Goal Creation (Company Big Goal vs Department Goal)
   const [goalMode, setGoalMode] = useState<'company' | 'department'>('company');
 
+  // Inline HOD Creator State (useful in 121 flow and for standalone addHod)
+  const [showInlineAddHod, setShowInlineAddHod] = useState(false);
+  const [newHodCompany, setNewHodCompany] = useState<CompanyId>('next_energy');
+  const [newHodDeptName, setNewHodDeptName] = useState('');
+  const [newHodName, setNewHodName] = useState('');
+  const [newHodRoleTitle, setNewHodRoleTitle] = useState('');
+  const [newHodAhod, setNewHodAhod] = useState('');
+  const [newHodCadence, setNewHodCadence] = useState<'weekly' | 'monthly'>('weekly');
+
   useEffect(() => {
     if (type === 'companyGoal') {
       setGoalMode('company');
     } else if (type === 'deptGoal') {
       setGoalMode('department');
+    } else if (type === 'addHod') {
+      setShowInlineAddHod(true);
     }
   }, [type]);
 
@@ -192,6 +204,42 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({ isOpen, type, onCl
     onClose();
   };
 
+  const handleCreateInlineHod = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!newHodName || !newHodDeptName) return;
+
+    const newDeptId = `dept_${newHodDeptName.toLowerCase().replace(/[^a-z0-9]/g, '_')}_${Date.now()}`;
+    const newDept: Department = {
+      id: newDeptId,
+      name: newHodDeptName,
+      companyId: newHodCompany,
+      hod: newHodName,
+      ahod: newHodAhod ? newHodAhod : undefined,
+      roleTitle: newHodRoleTitle || `Head of ${newHodDeptName}`,
+      cadenceRequired: newHodCadence,
+    };
+
+    addDepartment(newDept);
+
+    // Auto-select this newly created HOD in the 121 session state
+    setSelectedDeptId(newDept.id);
+    setSessionPersonName(newDept.hod);
+    setSessionRole(newDept.roleTitle);
+    setSessionCompany(newDept.companyId);
+    setSessionCadence(newDept.cadenceRequired);
+
+    // Reset inline form fields
+    setNewHodDeptName('');
+    setNewHodName('');
+    setNewHodRoleTitle('');
+    setNewHodAhod('');
+    setShowInlineAddHod(false);
+
+    if (type === 'addHod') {
+      onClose();
+    }
+  };
+
   const handleSubmitDeptGoal = (e: React.FormEvent) => {
     e.preventDefault();
     if (!goalTitle) return;
@@ -306,6 +354,7 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({ isOpen, type, onCl
               )
             )}
             {type === '121' && <Users className="w-5 h-5 text-blue-600" />}
+            {type === 'addHod' && <Users className="w-5 h-5 text-indigo-600" />}
             {type === 'activity' && <Award className="w-5 h-5 text-blue-600" />}
             {type === 'journal' && <Zap className="w-5 h-5 text-purple-600" />}
             {type === 'book' && <BookOpen className="w-5 h-5 text-blue-600" />}
@@ -316,6 +365,7 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({ isOpen, type, onCl
                 goalMode === 'company' ? 'Add Company Big Goal' : 'Add Department Goal'
               )}
               {type === '121' && 'Log 1-on-1 (121) Session'}
+              {type === 'addHod' && 'Add New HOD / Department Head'}
               {type === 'activity' && 'Log Activity Impact'}
               {type === 'journal' && 'Add Strategic Reflection'}
               {type === 'book' && 'Add Book to Reading Log'}
